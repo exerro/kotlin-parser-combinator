@@ -5,6 +5,7 @@ object Tests {
         textStreamTests()
         positionTests()
         positionedTests()
+        lexerTests()
         printTestResults()
     }
 }

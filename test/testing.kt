@@ -1,3 +1,4 @@
+import java.lang.Exception
 
 private val testers = ArrayList<Tester>()
 
@@ -18,7 +19,7 @@ open class Tester(val name: String) {
     internal val buffer = StringBuilder()
 }
 
-class ValueTester<T>(val value: T, name: String): Tester(name)
+open class ValueTester<T>(val value: T, name: String): Tester(name)
 
 private fun fmt(text: String, bold: Boolean): String {
     val bs = if (bold) ";1" else ""
@@ -67,13 +68,13 @@ enum class Colour {
 }
 
 fun <T: Tester> T.write(text: String, foreground: Colour = Colour.NONE, bold: Boolean = false): T {
-    buffer.append("${fg(foreground, bold)}${fmt(text, bold)}\u001b[0m")
+    buffer.append("${fg(foreground, bold)}${fmt(text, bold)}\u001B[0m")
     return this
 }
 
 fun <T: Tester> T.writeln(text: String, foreground: Colour = Colour.NONE, bold: Boolean = false): T {
-    write(text, foreground, bold);
-    write("\n")
+    write(text, foreground, bold)
+    buffer.append("\n")
     return this
 }
 
@@ -101,8 +102,13 @@ fun <V, T: ValueTester<V>> T.hasValue(value: V): T
 fun <V, T: ValueTester<V>> T.notHasValue(value: V): T
         = assertNotEquals(this.value, value)
 
-private fun <T: Tester, R: Tester> T.child(tester: R, test: (R) -> Unit): T {
-    test(tester)
-    writeln("Test '%y${tester.name}%-'\n\t" + tester.buffer.toString().replace("\n", "\n\t"))
+fun <T: Tester, R: Tester> T.child(tester: R, test: (R) -> Unit): T {
+    try {
+        test(tester)
+    }
+    catch (e: Exception) {
+        tester.error(e.stackTrace.joinToString("\n    in ") { it.toString() })
+    }
+    writeln("Test '%y${tester.name}%-'" + ("\n\t" + tester.buffer.toString().replace("\n", "\n\t")).replace(Regex("\n\r?\t*$"), ""))
     return this
 }

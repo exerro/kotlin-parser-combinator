@@ -4,7 +4,7 @@ fun positionedTests() {
             .value(Token(0, "Hello", Position(1, 2, 3, 4)), "token") { token -> token
                     .assertEquals(token.value.getValue(), "Hello")
                     .assertEquals(token.value.getPosition(), Position(1, 2, 3, 4))
-                    .assertEquals(token.value.toString(), "Hello @ [line 1 col 2 .. line 3 col 4]")
+                    .assertEquals(token.value.toString(), "'Hello' @ [line 1 col 2 .. line 3 col 4]")
                     .value(token.value.withValue(5), "withValue(5)") { n -> n
                             .assertEquals(n.value.getValue(), 5)
                             .assertEquals(n.value.getPosition(), Position(1, 2, 3, 4))
