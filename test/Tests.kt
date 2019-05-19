@@ -6,6 +6,7 @@ object Tests {
         positionTests()
         positionedTests()
         lexerTests()
+        parsingTests()
         printTestResults()
     }
 }

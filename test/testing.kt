@@ -10,7 +10,7 @@ fun test(name: String, test: (Tester) -> Unit) {
 
 fun printTestResults() {
     for (tester in testers) {
-        println("Test '\u001B[33m${tester.name}\u001B[0m'\n\t${tester.buffer.toString().replace("\n", "\n\t")}")
+        println("Test '\u001B[35m${tester.name}\u001B[0m'\n\t${tester.buffer.toString().replace("\n", "\n\t")}")
         println()
     }
 }
@@ -107,8 +107,8 @@ fun <T: Tester, R: Tester> T.child(tester: R, test: (R) -> Unit): T {
         test(tester)
     }
     catch (e: Exception) {
-        tester.error(e.stackTrace.joinToString("\n    in ") { it.toString() })
+        tester.error((e.message ?: "") + "\n    in " + e.stackTrace.joinToString("\n    in ") { it.toString() })
     }
-    writeln("Test '%y${tester.name}%-'" + ("\n\t" + tester.buffer.toString().replace("\n", "\n\t")).replace(Regex("\n\r?\t*$"), ""))
+    writeln("Test '%m${tester.name}%-'" + ("\n\t" + tester.buffer.toString().replace("\n", "\n\t")).replace(Regex("\n\r?\t*$"), ""))
     return this
 }

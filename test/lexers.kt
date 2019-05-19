@@ -136,7 +136,7 @@ class LexerTester(
     }
     fun subNextToken(test: (LexerTester) -> Unit): LexerTester { (parent ?: this).child(LexerTester("$name (sub)", value.next().second, null), test); return this }
     fun assertTokenEquals(value: String): LexerTester { (parent ?: this).assertEquals(lastToken.text, value); return this }
-    fun assertTokenHasType(type: Int): LexerTester { (parent ?: this).assertEquals(lastToken.type, type); return this }
+    fun assertTokenHasType(type: TokenType): LexerTester { (parent ?: this).assertEquals(lastToken.type, type); return this }
     fun assertTokenHasPosition(position: Position): LexerTester { (parent ?: this).assertEquals(lastToken.getPosition(), position); return this }
     fun printToken(): LexerTester { (parent ?: this).writeln(lastToken.toString(), Colour.BLUE); return this }
 }

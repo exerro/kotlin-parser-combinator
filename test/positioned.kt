@@ -1,7 +1,7 @@
 
 fun positionedTests() {
     test("Positioned") { it
-            .value(Token(0, "Hello", Position(1, 2, 3, 4)), "token") { token -> token
+            .value(Token(TOKEN_EOF, "Hello", Position(1, 2, 3, 4)), "token") { token -> token
                     .assertEquals(token.value.getValue(), "Hello")
                     .assertEquals(token.value.getPosition(), Position(1, 2, 3, 4))
                     .assertEquals(token.value.toString(), "'Hello' @ [line 1 col 2 .. line 3 col 4]")

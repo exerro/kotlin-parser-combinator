@@ -1,43 +1,26 @@
 import java.lang.StringBuilder
 
-// integer constants for common token types
-const val TOKEN_EOF = 0
-const val TOKEN_INT = 1
-const val TOKEN_FLOAT = 2
-const val TOKEN_STR = 3
-const val TOKEN_CHAR = 4
-const val TOKEN_SYM = 5
-const val TOKEN_IDENT = 6
-const val TOKEN_KEYWORD = 7
-
 /** A class used for lexing text streams
  *
  * `consumeToken` consumes a token, given an text stream and position
  *
  * it may return null to indicate there is no valid token, and may be made from functions in LexerTools */
-open class Lexer(
+class Lexer(
         private val stream: TextStream,
         private val consumeToken: (TextStream, Position) -> Token?,
+        private val consumeWhitespace: (TextStream, Position) -> Position = defaultConsumeWhitespace,
         private var position: Position = Position(1, 1)
 ) {
     private lateinit var result: Pair<Token, Lexer>
 
-    /** Skips a symbol, advancing the current lexer position accordingly */
-    @Suppress("MemberVisibilityCanBePrivate")
-    protected fun skipSymbol(symbol: Char) {
-        position = if (symbol == '\n') Position(position.line2 + 1, 1)
-                 else position.after(1)
-    }
-
     /** Generates a pair of the next token and the next lexer to use */
     fun next(): Pair<Token, Lexer> {
         if (!::result.isInitialized) {
-            consumeWhitespace()
-
+            position = consumeWhitespace(stream, position)
             val token = if (stream.isEOF()) Token(TOKEN_EOF, "EOF", position) else consumeToken(stream, position)
 
             if (token != null) {
-                result = Pair(token, Lexer(stream, consumeToken, token.getPosition().after(1)))
+                result = Pair(token, Lexer(stream, consumeToken, consumeWhitespace, token.getPosition().after(1)))
             }
             else {
                 throw TokenParseException("No token match for character '${stream.peekNextChar()}'")
@@ -45,12 +28,6 @@ open class Lexer(
         }
 
         return result
-    }
-
-    /** Consumes whitespace from the stream */
-    protected open fun consumeWhitespace() {
-        while (!stream.isEOF() && (stream.peekNextChar() == ' ' || stream.peekNextChar() == '\t' || stream.peekNextChar() == '\n' || stream.peekNextChar() == '\r'))
-            skipSymbol(stream.readNextChar())
     }
 }
 
@@ -138,4 +115,15 @@ infix fun ((TextStream, Position) -> Token?).lexUnion(
         other: (TextStream, Position) -> Token?): (TextStream, Position
 ) -> Token? = { stream, position ->
     this(stream, position) ?: other(stream, position)
+}
+
+/** Consumes whitespace from the stream */
+private val defaultConsumeWhitespace: (TextStream, Position) -> Position = { stream, pos ->
+    var position = pos
+    while (!stream.isEOF() && (stream.peekNextChar() == ' ' || stream.peekNextChar() == '\t' || stream.peekNextChar() == '\n' || stream.peekNextChar() == '\r')) {
+        val symbol = stream.readNextChar()
+        position = if (symbol == '\n') Position(position.line2 + 1, 1)
+        else position.after(1)
+    }
+    position
 }
