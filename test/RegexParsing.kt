@@ -9,29 +9,29 @@ sealed class RegexExpr {
 }
 
 val regexText: Parser<RegexExpr, Unit>
-        = Parsing.token<Unit>(TOKEN_STR) map { RegexExpr.RegexText(it.text) as RegexExpr }
+        = ParseTools.token<Unit>(TOKEN_STR) map { RegexExpr.RegexText(it.text) as RegexExpr }
 
 val regexCharSet
-        = Parsing.symbol<Unit>("[") then
-          Parsing.symbol<Unit>("^").optional() bindIn { isNegated ->
-              Parsing.list(Parsing.token<Unit>(TOKEN_STR) map { RegexExpr.RegexText(it.text) }) map {
+        = ParseTools.symbol<Unit>("[") then
+          ParseTools.symbol<Unit>("^").optional() bindIn { isNegated ->
+              ParseTools.list(ParseTools.token<Unit>(TOKEN_STR) map { RegexExpr.RegexText(it.text) }) map {
                   RegexExpr.RegexAlternation(it.toSet()) as RegexExpr
               }
           } followedBy
-          Parsing.symbol("]")
+          ParseTools.symbol("]")
 
 val regexPrimary
-        = Parsing.branch(
-            Parsing.symbol<Unit>("[") to regexCharSet,
-            Parsing.symbol<Unit>("(") to (Parsing.symbol<Unit>("(") then Parsing.defer { regexExpr } followedBy Parsing.symbol(")")),
-            Parsing.symbol<Unit>("$") to (Parsing.symbol<Unit>("$") map { RegexExpr.RegexEOF as RegexExpr }),
-            Parsing.symbol<Unit>(".") to (Parsing.symbol<Unit>(".") map { RegexExpr.RegexWildcard as RegexExpr }),
-            Parsing.token<Unit>(TOKEN_STR)     to regexText
+        = ParseTools.branch(
+            ParseTools.symbol<Unit>("[") to regexCharSet,
+            ParseTools.symbol<Unit>("(") to (ParseTools.symbol<Unit>("(") then ParseTools.defer { regexExpr } followedBy ParseTools.symbol(")")),
+            ParseTools.symbol<Unit>("$") to (ParseTools.symbol<Unit>("$") map { RegexExpr.RegexEOF as RegexExpr }),
+            ParseTools.symbol<Unit>(".") to (ParseTools.symbol<Unit>(".") map { RegexExpr.RegexWildcard as RegexExpr }),
+        ParseTools.token<Unit>(TOKEN_STR)        to regexText
         )
 
 val regexUnary
         = regexPrimary bindIn { primary ->
-            Parsing.list(Parsing.symbol<Unit>("+") or Parsing.symbol("-") or Parsing.symbol("*") or Parsing.symbol("?")) map {
+    ParseTools.list(ParseTools.symbol<Unit>("+") or ParseTools.symbol("-") or ParseTools.symbol("*") or ParseTools.symbol("?")) map {
                 it.fold(primary) { expr, sym -> when (sym.text) {
                     "+" -> RegexExpr.RegexConcatenation(expr, RegexExpr.RegexRepetition(expr))
                     "-" -> RegexExpr.RegexRepetition(expr, false)
@@ -43,15 +43,15 @@ val regexUnary
         }
 
 val regexList
-        = regexUnary bindIn { first -> Parsing.list(regexUnary) map { it.fold(first) { expr, next -> RegexExpr.RegexConcatenation(expr, next) } } }
+        = regexUnary bindIn { first -> ParseTools.list(regexUnary) map { it.fold(first) { expr, next -> RegexExpr.RegexConcatenation(expr, next) } } }
 
 val regexExpr: Parser<RegexExpr, Unit>
-        = regexList sepBy Parsing.symbol("|") map { if (it.size == 1) it[0] else RegexExpr.RegexAlternation(it.toSet()) }
+        = regexList sepBy ParseTools.symbol("|") map { if (it.size == 1) it[0] else RegexExpr.RegexAlternation(it.toSet()) }
 
 val regexRootExpr: Parser<RegexExpr, Unit>
-        = Parsing.branch(
-            Parsing.symbol<Unit>("^") to (Parsing.symbol<Unit>("^") then regexExpr followedBy Parsing.token(TOKEN_EOF)),
-            Parsing.any<Unit>()                to (regexExpr map { RegexExpr.RegexConcatenation(RegexExpr.RegexRepetition(RegexExpr.RegexWildcard, false), it) as RegexExpr } followedBy Parsing.token(TOKEN_EOF))
+        = ParseTools.branch(
+            ParseTools.symbol<Unit>("^") to (ParseTools.symbol<Unit>("^") then regexExpr followedBy ParseTools.token(TOKEN_EOF)),
+        ParseTools.any<Unit>()                to (regexExpr map { RegexExpr.RegexConcatenation(RegexExpr.RegexRepetition(RegexExpr.RegexWildcard, false), it) as RegexExpr } followedBy ParseTools.token(TOKEN_EOF))
         )
 
 fun regexLexer(stream: TextStream): Lexer = Lexer(

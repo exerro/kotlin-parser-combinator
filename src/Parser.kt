@@ -18,6 +18,45 @@ fun <T, U, R> ParseResultList<T, U>.bind(func: (ParseResult.ParseSuccess<T, U>) 
             is ParseResult.ParseFailure -> listOf(ParseResult.ParseFailure(it.error))
         } } .flatten()
 
-inline fun <reified T, reified U>
-ParseResultList<T, U>.noErrors(): ParseResultList<T, U>
-        = filter { it is ParseResult.ParseSuccess<T, U> } .ifEmpty { this }
+infix fun <T, U> Parser<T, U>.maybeError(error: (T, ParseContext<U>) -> ParseError?): Parser<T, U> = { ctx ->
+    this(ctx).bind {
+        val e = error(it.value, it.context)
+        if (e != null) listOf(ParseResult.ParseFailure(e)) else listOf(it)
+    }
+}
+
+infix fun <T, U> Parser<T, U>.collectErrors(collector: (Set<ParseError>, Position) -> ParseResultList<T, U>): Parser<T, U> = { ctx ->
+    val results = this(ctx)
+    val pos = ctx.lexer.next().first.getPosition()
+    results.filter { it is ParseResult.ParseSuccess } +
+            collector(results.filter { it is ParseResult.ParseFailure } .map { (it as ParseResult.ParseFailure).error } .toSet(), pos)
+}
+
+infix fun <T, U> Parser<T, U>.collectErrors(message: String): Parser<T, U> = collectErrors { errors, pos ->
+    listOf(ParseResult.ParseFailure(ParseError(message, pos, errors)))
+}
+
+fun <T, U> Parser<T, U>.filterErrors(noErrorsIfSuccess: Boolean = false): Parser<T, U> = { ctx ->
+    val results = this(ctx)
+    val lastErrorPosition = getLastErrorPosition(results.filter { it is ParseResult.ParseFailure } .map { (it as ParseResult.ParseFailure).error.position })
+    val errors = results .filter { it is ParseResult.ParseFailure } .map { it as ParseResult.ParseFailure } .filter {
+        (it.error.position.line1 > lastErrorPosition.line1 || it.error.position.line1 == lastErrorPosition.line1 && it.error.position.char1 >= lastErrorPosition.char1)
+    }
+    if (noErrorsIfSuccess) {
+        results.filter { it is ParseResult.ParseSuccess } .ifEmpty { errors }
+    }
+    else {
+        results.filter { it is ParseResult.ParseSuccess } + errors
+    }
+}
+
+private fun getLastErrorPosition(positions: List<Position>): Position {
+    if (positions.isEmpty()) return Position(0, 0)
+    var last = positions[0]
+
+    for (position in positions.subList(1, positions.size)) {
+        if (position.line1 > last.line1 || position.line1 == last.line1 && position.char1 > last.char1) last = position
+    }
+
+    return last
+}

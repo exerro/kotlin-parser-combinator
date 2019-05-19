@@ -1,7 +1,7 @@
 fun parsingTests() {
     test("Parsing") { p -> p
             .parser("Hello world 50") { parser -> parser
-                    .on("just identifier", Parsing.token(TOKEN_IDENT)) { results ->
+                    .on("just identifier", ParseTools.token(TOKEN_IDENT)) { results ->
                         results
                                 .assertSuccess()
                                 .assertErrorCount(0)
@@ -12,7 +12,7 @@ fun parsingTests() {
                                 }
                     }
                     .on("two identifiers",
-                            Parsing.token<Unit>(TOKEN_IDENT).bindIn { first -> Parsing.token<Unit>(TOKEN_IDENT) map { Pair(first, it) } }
+                            ParseTools.token<Unit>(TOKEN_IDENT).bindIn { first -> ParseTools.token<Unit>(TOKEN_IDENT) map { Pair(first, it) } }
                     ) { results -> results
                             .assertSuccess()
                             .assertErrorCount(0)
@@ -24,7 +24,7 @@ fun parsingTests() {
                                     .assertEquals(value.value.second.text, "world")
                             }
                     }
-                    .on("list of identifiers", Parsing.list(Parsing.token<Unit>(TOKEN_IDENT)).single().filterErrors(true)) { results -> results
+                    .on("list of identifiers", ParseTools.list(ParseTools.token<Unit>(TOKEN_IDENT)).single().filterErrors(true)) { results -> results
                             .assertSuccess()
                             .assertErrorCount(0)
                             .printResults()
@@ -37,7 +37,7 @@ fun parsingTests() {
                             }
                     }
                     .on("list of identifiers then integer",
-                            (Parsing.list(Parsing.token<Unit>(TOKEN_IDENT)).single() bindIn { first -> Parsing.token<Unit>(TOKEN_INT) map { Pair(first, it) } }).filterErrors(true)
+                            (ParseTools.list(ParseTools.token<Unit>(TOKEN_IDENT)).single() bindIn { first -> ParseTools.token<Unit>(TOKEN_INT) map { Pair(first, it) } }).filterErrors(true)
                     ) { results -> results
                             .assertSuccess()
                             .assertErrorCount(0)
@@ -53,16 +53,16 @@ fun parsingTests() {
                             }
                     }
                     .on("list of identifiers then identifier",
-                            (Parsing.list(Parsing.token<Unit>(TOKEN_IDENT))
-                                    followedBy Parsing.token(TOKEN_IDENT)).single().filterErrors(true)
+                            (ParseTools.list(ParseTools.token<Unit>(TOKEN_IDENT))
+                                    followedBy ParseTools.token(TOKEN_IDENT)).single().filterErrors(true)
                     ) { results -> results
                             .assertSuccess()
                             .assertErrorCount(0)
                             .printResults()
                     }
                     .on("list of identifiers then string",
-                            (Parsing.list(Parsing.token<Unit>(TOKEN_IDENT))
-                                    followedBy Parsing.token(TOKEN_STR)).filterErrors(true)
+                            (ParseTools.list(ParseTools.token<Unit>(TOKEN_IDENT))
+                                    followedBy ParseTools.token(TOKEN_STR)).filterErrors(true)
                     ) { results -> results
                             .assertFailure()
                             .assertErrorCount(2)
@@ -71,14 +71,14 @@ fun parsingTests() {
                     }
             }
             .parser("a b c d e f g") { parser -> parser
-                    .on("list list", (Parsing.list(Parsing.token<Unit>(TOKEN_IDENT)) followedBy Parsing.list(Parsing.token(TOKEN_IDENT))).single()) { results -> results
+                    .on("list list", (ParseTools.list(ParseTools.token<Unit>(TOKEN_IDENT)) followedBy ParseTools.list(ParseTools.token(TOKEN_IDENT))).single()) { results -> results
                             .assertSuccess()
                             .onSuccess { value -> value
                                     .assertEquals(value.value.size, 7)
                             }
                     }
                     .on("empty list",
-                            (Parsing.list(Parsing.token<Unit>(TOKEN_STR))).single()
+                            (ParseTools.list(ParseTools.token<Unit>(TOKEN_STR))).single()
                     ) { results -> results
                             .assertSuccess()
                             .onSuccess { value -> value
@@ -86,7 +86,7 @@ fun parsingTests() {
                             }
                     }
                     .on("list of pairs",
-                            (Parsing.list(Parsing.token<Unit>(TOKEN_IDENT) followedBy Parsing.token(TOKEN_IDENT))).single()
+                            (ParseTools.list(ParseTools.token<Unit>(TOKEN_IDENT) followedBy ParseTools.token(TOKEN_IDENT))).single()
                     ) { results -> results
                             .assertSuccess()
                             .onSuccess { value -> value
@@ -95,7 +95,7 @@ fun parsingTests() {
                     }
             }
             .parser(". b") { parser -> parser
-                    .on("(ident|int) ident", (Parsing.token<Unit>(TOKEN_IDENT) or Parsing.token(TOKEN_INT) collectErrors "first token match failed") followedBy Parsing.token(TOKEN_IDENT)) { results -> results
+                    .on("(ident|int) ident", (ParseTools.token<Unit>(TOKEN_IDENT) or ParseTools.token(TOKEN_INT) collectErrors "first token match failed") followedBy ParseTools.token(TOKEN_IDENT)) { results -> results
                             .assertErrorCount(1)
                             .shouldError("first token match failed")
                     }
@@ -131,6 +131,34 @@ fun parsingTests() {
                     .assertFailure()
                     .assertErrorCount(1)
                     .shouldError("No viable alternatives", Position(1, 3))
+            }
+            .parserOn("math 1", "1 + 2 * 3 ^ 4 * 5 - 6", mathParser.followedBy(ParseTools.token(TOKEN_EOF)).filterErrors(true)) { results -> results
+                    .assertSuccess()
+                    .assertErrorCount(0)
+                    .onSuccess { value -> value
+                            .assertEquals(value.value, 805)
+                    }
+            }
+            .parserOn("math 1", "-2^4", mathParser.followedBy(ParseTools.token(TOKEN_EOF)).filterErrors(true)) { results -> results
+                    .assertSuccess()
+                    .assertErrorCount(0)
+                    .onSuccess { value -> value
+                            .assertEquals(value.value, -16)
+                    }
+            }
+            .parserOn("math 1", "3*-2>", mathParser.followedBy(ParseTools.token(TOKEN_EOF)).filterErrors(true)) { results -> results
+                    .assertSuccess()
+                    .assertErrorCount(0)
+                    .onSuccess { value -> value
+                            .assertEquals(value.value, -5)
+                    }
+            }
+            .parserOn("math 1", "1 + 2 + 3", mathParser.followedBy(ParseTools.token(TOKEN_EOF)).filterErrors(true)) { results -> results
+                    .assertSuccess()
+                    .assertErrorCount(0)
+                    .onSuccess { value -> value
+                            .assertEquals(value.value, 6)
+                    }
             }
     }
 }
