@@ -8,10 +8,12 @@ abstract class OperatorParser<T, U>(private val operators: OperatorSet, private 
     open fun getUnaryTermParser(): Parser<UnaryTerm<T>, U> {
         val lp = getLeftUnaryOperatorParser()
         val rp = getRightUnaryOperatorParser()
+        val lpt = if (lp != null) ParseTools.list(lp) else ParseTools.nothing<U>() map { listOf<Positioned<Operator.LeftUnaryOperator>>() }
+        val rpt = if (rp != null) ParseTools.list(rp) else ParseTools.nothing<U>() map { listOf<Positioned<Operator.RightUnaryOperator>>() }
 
-        return ParseTools.list(lp) bindIn { lops ->
+        return lpt bindIn { lops ->
             primaryParser bindIn { value ->
-                ParseTools.list(rp) bindIn { rops ->
+                rpt bindIn { rops ->
                     ParseTools.value<UnaryTerm<T>, U>(
                             Triple(lops, value, rops)
                     )
@@ -61,19 +63,21 @@ abstract class OperatorParser<T, U>(private val operators: OperatorSet, private 
             .map { operator -> getParserForOperator(operator) map { it.withValue(operator) } }
             .union()
 
-    open fun getRightUnaryOperatorParser(): Parser<Positioned<Operator.RightUnaryOperator>, U>
+    open fun getRightUnaryOperatorParser(): Parser<Positioned<Operator.RightUnaryOperator>, U>?
             = operators
             .filter { it is Operator.RightUnaryOperator }
             .map { it as Operator.RightUnaryOperator }
             .map { operator -> getParserForOperator(operator) map { it.withValue(operator) } }
-            .union()
+            .ifEmpty { null }
+            ?.union()
 
-    open fun getLeftUnaryOperatorParser(): Parser<Positioned<Operator.LeftUnaryOperator>, U>
+    open fun getLeftUnaryOperatorParser(): Parser<Positioned<Operator.LeftUnaryOperator>, U>?
         = operators
             .filter { it is Operator.LeftUnaryOperator }
             .map { it as Operator.LeftUnaryOperator }
             .map { operator -> getParserForOperator(operator) map { it.withValue(operator) } }
-            .union()
+            .ifEmpty { null }
+            ?.union()
 
     protected fun getParserForOperator(operator: Operator)
         = if (operator.isKeyword) ParseTools.keyword<U>(operator.symbol) else ParseTools.symbol(operator.symbol)
@@ -150,7 +154,7 @@ sealed class Operator(
         val symbol: String,
         val isKeyword: Boolean = false
 ) {
-    open class LeftUnaryOperator(precedence: Int, symbol: String, isKeyword: Boolean = false): Operator(precedence, symbol, isKeyword)
-    open class RightUnaryOperator(precedence: Int, symbol: String, isKeyword: Boolean = false): Operator(precedence, symbol, isKeyword)
-    open class BinaryOperator(precedence: Int, symbol: String, val leftAssociative: Boolean = true, isKeyword: Boolean = false): Operator(precedence, symbol, isKeyword)
+    open class LeftUnaryOperator(precedence: Int, symbol: String, isKeyword: Boolean = false): Operator(precedence, symbol, isKeyword) { override fun toString() = "($symbol)" }
+    open class RightUnaryOperator(precedence: Int, symbol: String, isKeyword: Boolean = false): Operator(precedence, symbol, isKeyword) { override fun toString() = "($symbol)" }
+    open class BinaryOperator(precedence: Int, symbol: String, val leftAssociative: Boolean = true, isKeyword: Boolean = false): Operator(precedence, symbol, isKeyword) { override fun toString() = "($symbol)" }
 }

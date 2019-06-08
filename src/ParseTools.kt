@@ -72,7 +72,7 @@ infix fun <T, R, U> Parser<T, U>.sepBy(other: Parser<R, U>): Parser<List<T>, U> 
 } }
 
 fun <T, U> List<Parser<T, U>>.union(): Parser<T, U>
-        = this.subList(1, this.size).fold(this[0]) { a, b -> a union b }
+        = drop(1).fold(this[0]) { a, b -> a union b }
 
 fun <T, U> Parser<T, U>.single(): Parser<T, U> = { ctx ->
     val results = this(ctx)
