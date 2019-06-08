@@ -4,7 +4,7 @@ typealias OperatorSet = Set<Operator>
 private typealias UnaryTerm<T> = Triple<List<Operator.LeftUnaryOperator>, T, List<Operator.RightUnaryOperator>>
 private typealias BinaryTerm<T> = Pair<UnaryTerm<T>, List<Pair<Operator.BinaryOperator, UnaryTerm<T>>>>
 
-abstract class OperatorParser<T, U>(val operators: OperatorSet, val primaryParser: Parser<T, U>) {
+abstract class OperatorParser<T, U>(private val operators: OperatorSet, private val primaryParser: Parser<T, U>) {
     open fun getUnaryTermParser(): Parser<UnaryTerm<T>, U> {
         val lp = getLeftUnaryOperatorParser()
         val rp = getRightUnaryOperatorParser()
@@ -85,7 +85,6 @@ abstract class OperatorParseState<T>(
         protected val operands: MutableList<T> = ArrayList(),
         protected val operators: MutableList<Operator> = ArrayList()
 ) {
-
     fun getResult(): T {
         while (operators.isNotEmpty()) collapse()
         return operands[0]

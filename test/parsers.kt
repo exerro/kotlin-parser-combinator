@@ -146,7 +146,7 @@ fun parsingTests() {
                             .assertEquals(value.value, -16)
                     }
             }
-            .parserOn("math 1", "3*-2>", mathParser.followedBy(ParseTools.token(TOKEN_EOF)).filterErrors(true)) { results -> results
+            .parserOn("math 1", "3 * -2 > ", mathParser.followedBy(ParseTools.token(TOKEN_EOF)).filterErrors(true)) { results -> results
                     .assertSuccess()
                     .assertErrorCount(0)
                     .onSuccess { value -> value
@@ -171,7 +171,7 @@ class ParseTester<U>(text: String, private val data: U): ValueTester<String>(
 class ParseResultTester<T, U>(
         values: ParseResultList<T, U>,
         name: String,
-        val sgen: () -> TextStream
+        val getStream: () -> TextStream
 ): ValueTester<ParseResultList<T, U>>(values, name)
 
 fun <U> Tester.parser(text: String, data: U, test: (ParseTester<U>) -> Unit): Tester
@@ -194,7 +194,7 @@ fun <T> ParseTester<Unit>.on(name: String, parser: Parser<T, Unit>, newl: (TextS
 fun <T, U> ParseResultTester<T, U>.assertSuccess(): ParseResultTester<T, U> {
     value .filter { it is ParseResult.ParseSuccess<T, U> } .ifEmpty {
         error("Parse didn't succeed")
-        value.map { error((it as ParseResult.ParseFailure).error.getString(sgen)) }
+        value.map { error((it as ParseResult.ParseFailure).error.getString(getStream)) }
     }
     return this
 }
@@ -232,7 +232,7 @@ fun <T, U> ParseResultTester<T, U>.assertErrorCount(count: Int): ParseResultTest
 }
 
 fun <T, U> ParseResultTester<T, U>.printErrors(): ParseResultTester<T, U> {
-    value .filter { it is ParseResult.ParseFailure }.map { writeln("%r" + (it as ParseResult.ParseFailure).error.getString(sgen) + "%-") }
+    value .filter { it is ParseResult.ParseFailure }.map { writeln("%r" + (it as ParseResult.ParseFailure).error.getString(getStream) + "%-") }
     return this
 }
 
@@ -242,7 +242,7 @@ fun <T, U> ParseResultTester<T, U>.shouldError(message: String): ParseResultTest
         error("No such error '$message'")
     }
     else {
-        writeln("Errored '%b$message%-' as expected:%y\n\t" + errors.joinToString("\n\t") { it.error.getString(sgen).replace("\n", "\n\t") })
+        writeln("Errored '%b$message%-' as expected:%y\n\t" + errors.joinToString("\n\t") { it.error.getString(getStream).replace("\n", "\n\t") })
     }
     return this
 }
@@ -253,7 +253,7 @@ fun <T, U> ParseResultTester<T, U>.shouldError(message: String, position: Positi
         error("No such error '$message'")
     }
     else {
-        writeln("Errored '%b$message%-' as expected:%y\n\t" + errors.joinToString("\n\t") { it.error.getString(sgen).replace("\n", "\n\t") })
+        writeln("Errored '%b$message%-' as expected:%y\n\t" + errors.joinToString("\n\t") { it.error.getString(getStream).replace("\n", "\n\t") })
     }
     return this
 }

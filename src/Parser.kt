@@ -36,13 +36,13 @@ infix fun <T, U> Parser<T, U>.collectErrors(message: String): Parser<T, U> = col
     listOf(ParseResult.ParseFailure(ParseError(message, pos, errors)))
 }
 
-fun <T, U> Parser<T, U>.filterErrors(noErrorsIfSuccess: Boolean = false): Parser<T, U> = { ctx ->
+fun <T, U> Parser<T, U>.filterErrors(noErrorsIfSuccessful: Boolean = false): Parser<T, U> = { ctx ->
     val results = this(ctx)
     val lastErrorPosition = getLastErrorPosition(results.filter { it is ParseResult.ParseFailure } .map { (it as ParseResult.ParseFailure).error.position })
     val errors = results .filter { it is ParseResult.ParseFailure } .map { it as ParseResult.ParseFailure } .filter {
         (it.error.position.line1 > lastErrorPosition.line1 || it.error.position.line1 == lastErrorPosition.line1 && it.error.position.char1 >= lastErrorPosition.char1)
     }
-    if (noErrorsIfSuccess) {
+    if (noErrorsIfSuccessful) {
         results.filter { it is ParseResult.ParseSuccess } .ifEmpty { errors }
     }
     else {
