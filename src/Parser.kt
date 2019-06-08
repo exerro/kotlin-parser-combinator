@@ -50,13 +50,4 @@ fun <T, U> Parser<T, U>.filterErrors(noErrorsIfSuccessful: Boolean = false): Par
     }
 }
 
-private fun getLastErrorPosition(positions: List<Position>): Position {
-    if (positions.isEmpty()) return Position(0, 0)
-    var last = positions[0]
-
-    for (position in positions.subList(1, positions.size)) {
-        if (position.line1 > last.line1 || position.line1 == last.line1 && position.char1 > last.char1) last = position
-    }
-
-    return last
-}
+private fun getLastErrorPosition(positions: List<Position>): Position = positions.last()

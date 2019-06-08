@@ -73,3 +73,8 @@ private fun getLine(stream: TextStream, line: Int): String {
 
     return result.toString()
 }
+
+fun List<Position>.last(): Position
+        = drop(1).fold(this[0]) { a, b ->
+            if (a.line1 > b.line1) a else if (a.line1 == b.line1 && a.char1 > b.char1) a else b
+        }
