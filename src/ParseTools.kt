@@ -79,6 +79,9 @@ fun <T, U> Parser<T, U>.single(): Parser<T, U> = { ctx ->
     results .filter { it is ParseResult.ParseSuccess } .take(1) + results.filter { it is ParseResult.ParseFailure }
 }
 
+fun <T, R, U> Parser<T, U>.ifFollowedBy(suffix: Parser<*, U>, f: (T) -> Parser<R, U>): IfFollowedByType<T, R, U>
+        = IfFollowedByType(this, suffix, f)
+
 infix fun <T, R, U> Parser<T, U>.map(func: (T) -> R): Parser<R, U> = { ctx ->
     this(ctx).bind { result -> listOf(ParseResult.ParseSuccess(func(result.value), result.context)) }
 }
@@ -117,4 +120,8 @@ infix fun <T, R, U> Parser<T, U>.followedBy(other: Parser<R, U>): Parser<T, U> =
 
 infix fun <T, R, U> Parser<T, U>.bindIn(p: (T) -> Parser<R, U>): Parser<R, U> = { ctx ->
     this(ctx).bind { p(it.value)(it.context) }
+}
+
+class IfFollowedByType<T, R, U>(val parser: Parser<T, U>, val suffix: Parser<*, U>, val f: (T) -> Parser<R, U>) {
+    fun otherwise(g: (T) -> Parser<R, U>): Parser<R, U> = parser bindIn { value -> suffix bindIn { f(value) } or g(value) }
 }

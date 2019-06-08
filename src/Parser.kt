@@ -38,7 +38,7 @@ infix fun <T, U> Parser<T, U>.collectErrors(message: String): Parser<T, U> = col
 
 fun <T, U> Parser<T, U>.filterErrors(noErrorsIfSuccessful: Boolean = false): Parser<T, U> = { ctx ->
     val results = this(ctx)
-    val lastErrorPosition = getLastErrorPosition(results.filter { it is ParseResult.ParseFailure } .map { (it as ParseResult.ParseFailure).error.position })
+    val lastErrorPosition = getLastErrorPosition(results.filter { it is ParseResult.ParseFailure } .map { it as ParseResult.ParseFailure } .map { it.error.position })
     val errors = results .filter { it is ParseResult.ParseFailure } .map { it as ParseResult.ParseFailure } .filter {
         (it.error.position.line1 > lastErrorPosition.line1 || it.error.position.line1 == lastErrorPosition.line1 && it.error.position.char1 >= lastErrorPosition.char1)
        }
@@ -50,4 +50,4 @@ fun <T, U> Parser<T, U>.filterErrors(noErrorsIfSuccessful: Boolean = false): Par
     }
 }
 
-private fun getLastErrorPosition(positions: List<Position>): Position = positions.last()
+private fun getLastErrorPosition(positions: List<Position>): Position = if (positions.isEmpty()) Position(0, 0) else positions.last()
