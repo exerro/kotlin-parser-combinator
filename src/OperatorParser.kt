@@ -1,8 +1,8 @@
 
 typealias OperatorSet = Set<Operator>
 
-private typealias UnaryTerm<T> = Triple<List<Operator.LeftUnaryOperator>, T, List<Operator.RightUnaryOperator>>
-private typealias BinaryTerm<T> = Pair<UnaryTerm<T>, List<Pair<Operator.BinaryOperator, UnaryTerm<T>>>>
+private typealias UnaryTerm<T> = Triple<List<Positioned<Operator.LeftUnaryOperator>>, T, List<Positioned<Operator.RightUnaryOperator>>>
+private typealias BinaryTerm<T> = Pair<UnaryTerm<T>, List<Pair<Positioned<Operator.BinaryOperator>, UnaryTerm<T>>>>
 
 abstract class OperatorParser<T, U>(private val operators: OperatorSet, private val primaryParser: Parser<T, U>) {
     open fun getUnaryTermParser(): Parser<UnaryTerm<T>, U> {
@@ -27,7 +27,7 @@ abstract class OperatorParser<T, U>(private val operators: OperatorSet, private 
         return term bindIn { first ->
             ParseTools.list(bp bindIn { operator ->
                 term bindIn { term ->
-                    ParseTools.value<Pair<Operator.BinaryOperator, UnaryTerm<T>>, U>(Pair(operator, term))
+                    ParseTools.value<Pair<Positioned<Operator.BinaryOperator>, UnaryTerm<T>>, U>(Pair(operator, term))
                 }
             }) bindIn { operators ->
                 ParseTools.value<BinaryTerm<T>, U>(Pair(first, operators))
@@ -54,25 +54,25 @@ abstract class OperatorParser<T, U>(private val operators: OperatorSet, private 
         }
     }
 
-    open fun getBinaryOperatorParser(): Parser<Operator.BinaryOperator, U>
+    open fun getBinaryOperatorParser(): Parser<Positioned<Operator.BinaryOperator>, U>
             = operators
             .filter { it is Operator.BinaryOperator }
             .map { it as Operator.BinaryOperator }
-            .map { operator -> getParserForOperator(operator) map { operator } }
+            .map { operator -> getParserForOperator(operator) map { it.withValue(operator) } }
             .union()
 
-    open fun getRightUnaryOperatorParser(): Parser<Operator.RightUnaryOperator, U>
+    open fun getRightUnaryOperatorParser(): Parser<Positioned<Operator.RightUnaryOperator>, U>
             = operators
             .filter { it is Operator.RightUnaryOperator }
             .map { it as Operator.RightUnaryOperator }
-            .map { operator -> getParserForOperator(operator) map { operator } }
+            .map { operator -> getParserForOperator(operator) map { it.withValue(operator) } }
             .union()
 
-    open fun getLeftUnaryOperatorParser(): Parser<Operator.LeftUnaryOperator, U>
+    open fun getLeftUnaryOperatorParser(): Parser<Positioned<Operator.LeftUnaryOperator>, U>
         = operators
             .filter { it is Operator.LeftUnaryOperator }
             .map { it as Operator.LeftUnaryOperator }
-            .map { operator -> getParserForOperator(operator) map { operator } }
+            .map { operator -> getParserForOperator(operator) map { it.withValue(operator) } }
             .union()
 
     protected fun getParserForOperator(operator: Operator)
@@ -83,7 +83,7 @@ abstract class OperatorParser<T, U>(private val operators: OperatorSet, private 
 
 abstract class OperatorParseState<T>(
         protected val operands: MutableList<T> = ArrayList(),
-        protected val operators: MutableList<Operator> = ArrayList()
+        protected val operators: MutableList<Positioned<Operator>> = ArrayList()
 ) {
     fun getResult(): T {
         while (operators.isNotEmpty()) collapse()
@@ -96,39 +96,40 @@ abstract class OperatorParseState<T>(
         return new
     }
 
-    fun pushOperator(operator: Operator): OperatorParseState<T> {
+    fun pushOperator(operator: Positioned<Operator>): OperatorParseState<T> {
         val new = copy()
-        while (new.operators.isNotEmpty() && new.shouldCollapseBefore(operator)) new.collapse()
+        while (new.operators.isNotEmpty() && new.shouldCollapseBefore(operator.getValue())) new.collapse()
         new.rawPushOperator(operator)
         return new
     }
 
     abstract fun copy(): OperatorParseState<T>
-    abstract fun collapseLeftUnaryOperator(operator: Operator.LeftUnaryOperator, value: T): T
-    abstract fun collapseRightUnaryOperator(operator: Operator.RightUnaryOperator, value: T): T
-    abstract fun collapseBinaryOperator(operator: Operator.BinaryOperator, lvalue: T, rvalue: T): T
+    abstract fun collapseLeftUnaryOperator(operator: Positioned<Operator.LeftUnaryOperator>, value: T): T
+    abstract fun collapseRightUnaryOperator(operator: Positioned<Operator.RightUnaryOperator>, value: T): T
+    abstract fun collapseBinaryOperator(operator: Positioned<Operator.BinaryOperator>, lvalue: T, rvalue: T): T
 
     private fun rawPushOperand(operand: T) { operands.add(operand) }
     private fun rawPopOperand(): T = operands.removeAt(operands.size - 1)
-    private fun rawPushOperator(operator: Operator) { operators.add(operator) }
-    private fun rawPopOperator(): Operator = operators.removeAt(operators.size - 1)
-    private fun peekOperator(): Operator = operators[operators.size - 1]
+    private fun rawPushOperator(operator: Positioned<Operator>) { operators.add(operator) }
+    private fun rawPopOperator(): Positioned<Operator> = operators.removeAt(operators.size - 1)
+    private fun peekOperator(): Operator = operators[operators.size - 1].getValue()
 
     private fun collapse() {
         if (operators.isNotEmpty()) {
-            when (val operator = rawPopOperator()) {
+            val positionedOperator = rawPopOperator()
+            when (val operator = positionedOperator.getValue()) {
                 is Operator.LeftUnaryOperator -> {
                     val value = rawPopOperand()
-                    rawPushOperand(collapseLeftUnaryOperator(operator, value))
+                    rawPushOperand(collapseLeftUnaryOperator(positionedOperator.withValue(operator), value))
                 }
                 is Operator.RightUnaryOperator -> {
                     val value = rawPopOperand()
-                    rawPushOperand(collapseRightUnaryOperator(operator, value))
+                    rawPushOperand(collapseRightUnaryOperator(positionedOperator.withValue(operator), value))
                 }
                 is Operator.BinaryOperator -> {
                     val rvalue = rawPopOperand()
                     val lvalue = rawPopOperand()
-                    rawPushOperand(collapseBinaryOperator(operator, lvalue, rvalue))
+                    rawPushOperand(collapseBinaryOperator(positionedOperator.withValue(operator), lvalue, rvalue))
                 }
             }
         }

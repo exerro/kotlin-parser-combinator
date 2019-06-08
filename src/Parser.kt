@@ -41,7 +41,7 @@ fun <T, U> Parser<T, U>.filterErrors(noErrorsIfSuccessful: Boolean = false): Par
     val lastErrorPosition = getLastErrorPosition(results.filter { it is ParseResult.ParseFailure } .map { (it as ParseResult.ParseFailure).error.position })
     val errors = results .filter { it is ParseResult.ParseFailure } .map { it as ParseResult.ParseFailure } .filter {
         (it.error.position.line1 > lastErrorPosition.line1 || it.error.position.line1 == lastErrorPosition.line1 && it.error.position.char1 >= lastErrorPosition.char1)
-    }
+       }
     if (noErrorsIfSuccessful) {
         results.filter { it is ParseResult.ParseSuccess } .ifEmpty { errors }
     }

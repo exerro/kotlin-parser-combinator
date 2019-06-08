@@ -2,9 +2,10 @@ import java.lang.StringBuilder
 
 /** A class used for lexing text streams
  *
- * `consumeToken` consumes a token, given an text stream and position
+ * `consumeToken` consumes a token, given a text stream and position.
  *
- * it may return null to indicate there is no valid token, and may be made from functions in LexerTools */
+ * It may return null to indicate there is no valid token, and may be made from functions in LexerTools.
+ */
 class Lexer(
         private val stream: TextStream,
         private val consumeToken: (TextStream, Position) -> Token?,

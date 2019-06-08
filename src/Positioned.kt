@@ -1,6 +1,6 @@
 
 /** Represents an object with a position */
-abstract class Positioned<T> {
+abstract class Positioned<out T> {
     /** Get the value of the object */
     abstract fun getValue(): T
 

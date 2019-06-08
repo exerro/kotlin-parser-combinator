@@ -15,23 +15,23 @@ class MathOperatorParser: OperatorParser<Int, Unit>(mathOperators, termParser) {
     override fun getParseState(): OperatorParseState<Int> = MathOperatorParseState()
 }
 
-class MathOperatorParseState(operands: MutableList<Int> = ArrayList(), operators: MutableList<Operator> = ArrayList()): OperatorParseState<Int>(operands, operators) {
+class MathOperatorParseState(operands: MutableList<Int> = ArrayList(), operators: MutableList<Positioned<Operator>> = ArrayList()): OperatorParseState<Int>(operands, operators) {
     override fun copy(): OperatorParseState<Int> = MathOperatorParseState(ArrayList(operands), ArrayList(operators))
 
-    override fun collapseLeftUnaryOperator(operator: Operator.LeftUnaryOperator, value: Int): Int
-            = when (operator.symbol) {
+    override fun collapseLeftUnaryOperator(operator: Positioned<Operator.LeftUnaryOperator>, value: Int): Int
+            = when (operator.getValue().symbol) {
                 "-" -> -value
                 else -> error("what")
             }
 
-    override fun collapseRightUnaryOperator(operator: Operator.RightUnaryOperator, value: Int): Int
-            = when (operator.symbol) {
+    override fun collapseRightUnaryOperator(operator: Positioned<Operator.RightUnaryOperator>, value: Int): Int
+            = when (operator.getValue().symbol) {
                 ">" -> value + 1
                 else -> error("what")
             }
 
-    override fun collapseBinaryOperator(operator: Operator.BinaryOperator, lvalue: Int, rvalue: Int): Int {
-        return when (operator.symbol) {
+    override fun collapseBinaryOperator(operator: Positioned<Operator.BinaryOperator>, lvalue: Int, rvalue: Int): Int {
+        return when (operator.getValue().symbol) {
             "+" -> lvalue + rvalue
             "-" -> lvalue - rvalue
             "*" -> lvalue * rvalue
