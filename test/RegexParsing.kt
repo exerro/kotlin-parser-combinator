@@ -67,7 +67,7 @@ val regexConsumeToken: (TextStream, Position) -> Token? = { stream, position ->
     else if (stream.peekNextChar() == '\\') {
         val chr = stream.readNextChar()
         val next = if (stream.isEOF()) null else stream.readNextChar()
-        Token(TOKEN_STR, if (next != null) chr.toString() + next else chr.toString(), if (next != null) position.extendTo(2) else position)
+        Token(TOKEN_STR, if (next != null) chr.toString() + next else chr.toString(), if (next != null) position extendTo 2 else position)
     }
     else {
         Token(TOKEN_STR, stream.readNextChar().toString(), position)

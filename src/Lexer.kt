@@ -10,7 +10,8 @@ class Lexer(
         private val stream: TextStream,
         private val consumeToken: (TextStream, Position) -> Token?,
         private val consumeWhitespace: (TextStream, Position) -> Position = defaultConsumeWhitespace,
-        private var position: Position = Position(1, 1)
+        private var position: Position = Position(1, 1),
+        val lastTokenPosition: Position = Position(1, 0)
 ) {
     private lateinit var result: Pair<Token, Lexer>
 
@@ -21,7 +22,7 @@ class Lexer(
             val token = if (stream.isEOF()) Token(TOKEN_EOF, "EOF", position) else consumeToken(stream, position)
 
             if (token != null) {
-                result = Pair(token, Lexer(stream, consumeToken, consumeWhitespace, token.getPosition().after(1)))
+                result = Pair(token, Lexer(stream, consumeToken, consumeWhitespace, token.getPosition() after 1, token.getPosition()))
             }
             else {
                 throw TokenParseException("No token match for character '${stream.peekNextChar()}'")
@@ -103,7 +104,7 @@ object LexerTools {
 
             val str = sb.toString()
             val lines = str.split("\n")
-            build(str, if (lines.size == 1) position.extendTo(str.length) else position.to(Position(position.line2 + lines.size - 1, lines[lines.size - 1].length)))
+            build(str, if (lines.size == 1) position extendTo str.length else position to Position(position.line2 + lines.size - 1, lines[lines.size - 1].length))
         }
         else {
             null
@@ -124,7 +125,7 @@ private val defaultConsumeWhitespace: (TextStream, Position) -> Position = { str
     while (!stream.isEOF() && (stream.peekNextChar() == ' ' || stream.peekNextChar() == '\t' || stream.peekNextChar() == '\n' || stream.peekNextChar() == '\r')) {
         val symbol = stream.readNextChar()
         position = if (symbol == '\n') Position(position.line2 + 1, 1)
-        else position.after(1)
+        else position after 1
     }
     position
 }

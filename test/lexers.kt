@@ -53,7 +53,7 @@ fun lexerTests() {
                     .assertTokenHasPosition(Position(1, 7, 1, 11))
             }
             .lexer("single-token second-token", LexerTools.matching({ it in 'a' .. 'z' }, { it in 'a' .. 'z' || it == '-' }) { str, pos ->
-                Token(TOKEN_IDENT, str, pos.extendTo(str.length))
+                Token(TOKEN_IDENT, str, pos extendTo str.length)
             }) { lexer -> lexer
                     .printToken()
                     .assertTokenHasType(TOKEN_IDENT)

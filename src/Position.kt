@@ -2,15 +2,6 @@ import java.lang.StringBuilder
 
 /** Represents a position in some source of text */
 data class Position(val line1: Int, val char1: Int, val line2: Int = line1, val char2: Int = char1) {
-    /** Returns a position spanning `this` and `other` */
-    fun to(other: Position): Position = Position(line1, char1, other.line2, other.char2)
-
-    /** Returns a position spanning `this` and a position `length` chars past the start of this position */
-    fun extendTo(length: Int): Position = Position(line1, char1, line1, char1 + length - 1)
-
-    /** Returns a position 1 character after the end of `this` */
-    fun after(chars: Int): Position = Position(line2, char2 + chars)
-
     /** Returns a string representation of this position */
     fun getPositionString(): String {
         return if (line1 == line2) {
@@ -42,6 +33,17 @@ data class Position(val line1: Int, val char1: Int, val line2: Int = line1, val 
     override fun toString(): String
             = getPositionString()
 }
+/** Returns a position spanning `this` and `other` */
+infix fun Position.to(other: Position): Position = Position(line1, char1, other.line2, other.char2)
+
+/** Returns a position spanning `this` and a position `length` chars past the start of this position */
+infix fun Position.extendTo(length: Int): Position = Position(line1, char1, line1, char1 + length - 1)
+
+/** Returns a position 1 character after the end of `this` */
+infix fun Position.after(chars: Int): Position = Position(line2, char2 + chars)
+
+/** Returns true if this position is immediately after the other position */
+infix fun Position.follows(other: Position): Boolean = line1 == other.line2 && char1 == other.char2 + 1
 
 private fun Position.getSourceLines(stream: TextStream): Pair<String, String> {
     return if (line1 == line2) {

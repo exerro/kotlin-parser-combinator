@@ -9,13 +9,13 @@ fun positionTests() {
                     .assertEquals(pos.value.line2, 1)
                     .assertEquals(pos.value.char2, 7)
             }
-            .value(Position(1, 5, 1, 7).to(Position(2, 4, 5, 6)), "to()") { pos -> pos
+            .value(Position(1, 5, 1, 7) to Position(2, 4, 5, 6), "to()") { pos -> pos
                     .hasValue(Position(1, 5, 5, 6))
             }
-            .value(Position(1, 5, 1, 7).extendTo(3), "extendTo()") { pos -> pos
+            .value(Position(1, 5, 1, 7) extendTo 3, "extendTo()") { pos -> pos
                     .hasValue(Position(1, 5, 1, 7))
             }
-            .value(Position(2, 3, 4, 5).after(6), "after()") { pos -> pos
+            .value(Position(2, 3, 4, 5) after 6, "after()") { pos -> pos
                     .hasValue(Position(4, 11, 4, 11))
             }
             .child("getPositionString()") { str -> str

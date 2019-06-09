@@ -49,7 +49,12 @@ object ParseTools {
             = token(TOKEN_KEYWORD, keyword)
 
     fun <U> symbol(symbol: String): Parser<Token, U>
-            = token(TOKEN_SYM, symbol)
+            = symbol.drop(1).fold(token(TOKEN_SYM, symbol.first().toString())) { a, b ->
+                a where { _, ctx ->
+                    println(ctx.lexer.next().first.getPosition().toString() + ", " + ctx.lexer.lastTokenPosition)
+                    ctx.lexer.next().first.getPosition() follows ctx.lexer.lastTokenPosition
+                } bindIn { first -> token<U>(TOKEN_SYM, b.toString()) map { Token(TOKEN_SYM, first.text + it.text, first.getPosition() to it.getPosition()) } }
+            }
 
     fun <T, U> list(parser: Parser<T, U>): Parser<List<T>, U>
             = parser bindIn { first -> list(parser) map { listOf(first) + it } } union (nothing<U>() map { listOf<T>() })
@@ -81,6 +86,13 @@ fun <T, U> Parser<T, U>.single(): Parser<T, U> = { ctx ->
 
 fun <T, R, U> Parser<T, U>.ifFollowedBy(suffix: Parser<*, U>, f: (T) -> Parser<R, U>): IfFollowedByType<T, R, U>
         = IfFollowedByType(this, suffix, f)
+
+infix fun <T, U> Parser<T, U>.where(func: (T, ParseContext<U>) -> Boolean): Parser<T, U> = { ctx ->
+    this(ctx).bind {
+        val ok = func(it.value, it.context)
+        if (ok) listOf(it) else listOf()
+    }
+}
 
 infix fun <T, R, U> Parser<T, U>.map(func: (T) -> R): Parser<R, U> = { ctx ->
     this(ctx).bind { result -> listOf(ParseResult.ParseSuccess(func(result.value), result.context)) }
