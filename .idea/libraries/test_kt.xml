@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="test-kt">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../../dev_out/test-kt.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

@@ -1,30 +1,28 @@
-import kotlin.test.assertEquals
 
 fun textStreamTests() {
-    test("TextStream") { it
-            .value(StringTextStream("Hello"), "string text stream") { stream -> stream
-                    .assertEquals(stream.value.peekNextChar(), 'H')
-                    .assertEquals(stream.value.isEOF(), false)
-                    .assertEquals(stream.value.readNextChar(), 'H')
-                    .assertEquals(stream.value.peekNextChar(), 'e')
-                    .assertEquals(stream.value.readNextChar(), 'e')
-                    .assertEquals(stream.value.readNextChar(), 'l')
-                    .assertEquals(stream.value.readNextChar(), 'l')
-                    .assertEquals(stream.value.readNextChar(), 'o')
-                    .assertEquals(stream.value.isEOF(), true)
-            }
-            .value(FileTextStream("test/file-text-stream.txt"), "file text stream") { stream -> stream
-                    .assertEquals(stream.value.peekNextChar(), 'H')
-                    .assertEquals(stream.value.isEOF(), false)
-                    .assertEquals(stream.value.readNextChar(), 'H')
-                    .assertEquals(stream.value.peekNextChar(), 'e')
-                    .assertEquals(stream.value.readNextChar(), 'e')
-                    .assertEquals(stream.value.readNextChar(), 'l')
-                    .assertEquals(stream.value.readNextChar(), 'l')
-                    .assertEquals(stream.value.readNextChar(), 'o')
-                    .assertEquals(stream.value.isEOF(), true)
-            }
-    }
+    test("TextStream") {
+        value(StringTextStream("Hello"), "string") {
+            value(value.peekNextChar(), "$name.peekNextChar()") { assertEquals('H') }
+            value(value.isEOF(), "$name.isEOF()") { assertEquals(false) }
+            value(value.readNextChar(), "$name.readNextChar()") { assertEquals('H') }
+            value(value.peekNextChar(), "$name.peekNextChar()") { assertEquals('e') }
+            value(value.readNextChar(), "$name.readNextChar()") { assertEquals('e') }
+            value(value.readNextChar(), "$name.readNextChar()") { assertEquals('l') }
+            value(value.readNextChar(), "$name.readNextChar()") { assertEquals('l') }
+            value(value.readNextChar(), "$name.readNextChar()") { assertEquals('o') }
+            value(value.isEOF(), "$name.isEOF()") { assertEquals(true) }
+        }
 
-    assertEquals(1, 1)
+        value(FileTextStream("test/file-text-stream.txt"), "file") {
+            value(value.peekNextChar(), "$name.peekNextChar()") { assertEquals('H') }
+            value(value.isEOF(), "$name.isEOF()") { assertEquals(false) }
+            value(value.readNextChar(), "$name.readNextChar()") { assertEquals('H') }
+            value(value.peekNextChar(), "$name.peekNextChar()") { assertEquals('e') }
+            value(value.readNextChar(), "$name.readNextChar()") { assertEquals('e') }
+            value(value.readNextChar(), "$name.readNextChar()") { assertEquals('l') }
+            value(value.readNextChar(), "$name.readNextChar()") { assertEquals('l') }
+            value(value.readNextChar(), "$name.readNextChar()") { assertEquals('o') }
+            value(value.isEOF(), "$name.isEOF()") { assertEquals(true) }
+        }
+    }
 }

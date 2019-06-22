@@ -1,53 +1,104 @@
 
-typealias Parser<T, U> = (ParseContext<U>) -> ParseResultList<T, U>
-typealias ParseResultList<T, U> = List<ParseResult<T, U>>
+// TODO: comments!
 
-sealed class ParseResult<out T, out U> {
-    data class ParseSuccess<out T, out U>(val value: T, val context: ParseContext<U>): ParseResult<T, U>()
-    data class ParseFailure(val error: ParseError): ParseResult<Nothing, Nothing>()
+typealias P<T> = (PState) -> PResult<T>
+typealias AnyP = P<Any?>
+
+private typealias PairList<A, B> = List<Pair<A, B>>
+
+open class PState(val lexer: Lexer) {
+    val pos get() = lexer.next().first.getPosition()
+    open fun consume() = PState(lexer.next().second)
 }
 
-data class ParseContext<out U>(val data: U, val lexer: Lexer) {
-    fun <R> withValue(value: R): ParseContext<R> = ParseContext(value, lexer)
-    fun withLexer(lexer: Lexer): ParseContext<U> = ParseContext(data, lexer)
-}
+sealed class PResult<out T>
+data class POK<T>(val value: T, val state: PState): PResult<T>()
+data class PFail<T>(val error: ParseError): PResult<T>()
 
-fun <T, U, R> ParseResultList<T, U>.bind(func: (ParseResult.ParseSuccess<T, U>) -> ParseResultList<R, U>): ParseResultList<R, U>
-        = map { when (it) {
-            is ParseResult.ParseSuccess<T, U> -> func(it)
-            is ParseResult.ParseFailure -> listOf(ParseResult.ParseFailure(it.error))
-        } } .flatten()
+@Suppress("ClassName")
+object parser {
+    fun <T> value(value: T): P<T> = { s -> POK(value, s) }
+    fun <T> error(error: ParseError): P<T> = { _ -> PFail(error) }
+    fun <T> p(p: () -> P<T>): P<T> = { s -> p()(s) }
+    val nothing: P<Unit> = value(Unit)
+    val state: P<PState> = { s -> POK(s, s) }
+    val token: P<Token> = { s -> POK(s.lexer.next().first, s.consume()) }
+    val identifier = tokenType(TOKEN_IDENT)
+    val integer = tokenType(TOKEN_INT)
+    val number = tokenType(TOKEN_FLOAT)
+    val character = tokenType(TOKEN_CHAR)
+    val string = tokenType(TOKEN_STR)
+    val eof = tokenType(TOKEN_EOF)
+    val newline = state bind { s -> lookahead(token filter { it.getPosition().line1 > s.lexer.lastTokenPosition.line2 }) } // TODO: better error message
 
-infix fun <T, U> Parser<T, U>.maybeError(error: (T, ParseContext<U>) -> ParseError?): Parser<T, U> = { ctx ->
-    this(ctx).bind {
-        val e = error(it.value, it.context)
-        if (e != null) listOf(ParseResult.ParseFailure(e)) else listOf(it)
+    fun tokenType(type: TokenType) = token err { if (it.type == type) null else ParseError("Expecting any $type, got ${it.type} ('${it.text}')", it.getPosition()) }
+    fun tokenValue(type: TokenType, value: String) = token err { if (it.type == type && it.text == value) null else ParseError("Expecting $type ('$value'), got ${it.type} ('${it.text}')", it.getPosition()) }
+    fun keyword(word: String) = tokenValue(TOKEN_KEYWORD, word)
+    fun keywords(keywords: List<String>): P<Set<Token>> = oneOf(keywords.map(::keyword)) bind { k -> keywords(keywords.filter { it != k.text }) map { setOf(k) + it } } mapErr { value(setOf()) }
+    fun keywords(vararg keywords: String): P<Set<Token>> = keywords(keywords.toList())
+    fun sym(symbol: String) = symbol.drop(1).fold(tokenValue(TOKEN_SYM, "${symbol[0]}")) { a, b -> a nextTo tokenValue(TOKEN_SYM, "$b") }
+    fun <T> lookahead(p: P<T>): P<T> = state bind { s -> p bind { { _: PState -> POK(it, s) } } }
+    fun <T> wrap(p: P<T>, a: AnyP, b: AnyP): P<T> = a then p followedBy b
+    fun <T> wrap(p: P<T>, a: String, b: String): P<T> = wrap(p, sym(a), sym(b))
+    fun <T> oneOf(parsers: List<P<T>>): P<T> = { s -> parsers.map { it(s) } .let { results -> results.firstOrNull { it is POK }
+            ?: PFail(ParseError("No viable alternatives", s.pos, results.map { (it as PFail).error } .toSet())) } }
+    fun <T> oneOf(vararg parsers: P<T>): P<T> = oneOf(parsers.toList())
+    fun <T> optional(p: P<T>): P<T?> = p or (nothing map { null })
+    fun <T> many(parser: P<T>): P<List<T>> = parser bind { fst -> p { many(parser) map { listOf(fst) + it } } } mapErr { value(listOf()) }
+    fun <T> sequence(fn: Sequence.() -> T): P<T> = { s -> val seq = Sequence(s); try { POK(fn(seq), seq.state) } catch (e: SErr) { PFail(e.err) } }
+
+    inline infix fun <T, R> P<T>.map(crossinline fn: (T) -> R): P<R> = bind { value -> value(fn(value)) }
+    inline infix fun <T> P<T>.err(crossinline test: (T) -> ParseError?) = bind { value -> test(value)?.let(::error) ?: value(value) }
+    inline infix fun <T> P<T>.filter(crossinline predicate: (T) -> Boolean) = state bind { s -> this err { if (predicate(it)) null else ParseError("Predicate failed", s.pos) } }
+    infix fun <A, B> P<A>.andThen(p: P<B>): P<Pair<A, B>> = bind { f -> p map { Pair(f, it) } }
+    infix fun <T> AnyP.then(p: P<T>): P<T> = bind { p }
+    infix fun <T> P<T>.followedBy(p: AnyP): P<T> = bind { v -> p map { v } }
+    infix fun <T> P<T>.or(p: P<T>): P<T> = state bind { s -> mapErr { err -> p mapErr { err2 -> error(ParseError("No viable alternative", s.pos, setOf(err, err2))) } } }
+    infix fun <T> P<T>.until(p: AnyP): P<List<T>> = p map { listOf<T>() } mapErr { (this bind { f -> until(p) map { rest -> listOf(f) + rest } }) }
+    infix fun <T> P<T>.sepBy(p: AnyP): P<List<T>> = bind { first -> p then sepBy(p) map { rest -> listOf(first) + rest } or value(listOf(first)) }
+    infix fun P<Token>.nextTo(p: P<Token>): P<Token> = bind { first -> p err { if (it.getPosition().follows(first.getPosition())) null
+        else ParseError("Token '${it.text}' doesn't follow '${first.text}'", it.getPosition()) } }
+    infix fun <T> P<T>.defaultsTo(default: T): P<T> = this or value(default)
+    infix fun <T, O> P<T>.sepByOp(p: P<O>): P<Pair<T, PairList<O, T>>> = bind { first -> p mapEither { operator -> when (operator) {
+        is POK -> sepByOp(p) map { (n, ops) -> Pair(first, listOf(Pair(operator.value, n)) + ops) }
+        is PFail -> value(Pair(first, listOf()))
+    } } }
+
+    inline infix fun <T, R> P<T>.mapEither(crossinline fn: (PResult<T>) -> P<R>): P<R> = { s -> when (val result = this(s)) {
+        is POK -> fn(result)(result.state)
+        is PFail -> fn(result)(s)
+    } }
+
+    inline infix fun <T, R> P<T>.bind(crossinline fn: (T) -> P<R>): P<R> = { s -> when (val result = this(s)) {
+        is POK -> fn(result.value)(result.state)
+        is PFail -> PFail(result.error)
+    } }
+
+    inline infix fun <T> P<T>.mapErr(crossinline fn: (ParseError) -> P<T>): P<T> = { s -> when (val result = this(s)) {
+        is POK -> result
+        is PFail -> fn(result.error)(s)
+    } }
+
+    operator fun <T> invoke(fn: parser.() -> P<T>): P<T> = fn(parser)
+
+    class Sequence internal constructor(var state: PState) {
+        fun <T> p(getParser: parser.() -> P<T>): T = when (val result = getParser(parser)(state)) {
+            is POK -> { state = result.state; result.value }
+            is PFail -> throw SErr(result.error)
+        }
     }
+
+    private class SErr(val err: ParseError): Throwable()
 }
 
-infix fun <T, U> Parser<T, U>.collectErrors(collector: (Set<ParseError>, Position) -> ParseResultList<T, U>): Parser<T, U> = { ctx ->
-    val results = this(ctx)
-    val pos = ctx.lexer.next().first.getPosition()
-    results.filter { it is ParseResult.ParseSuccess } +
-            collector(results.filter { it is ParseResult.ParseFailure } .map { (it as ParseResult.ParseFailure).error } .toSet(), pos)
+infix fun <T> P<T>.parse(s: StringTextStream) = this(PState(Lexer(s, LexerTools.defaults)))
+infix fun <T> P<T>.parse(s: String) = this(PState(Lexer(StringTextStream(s), LexerTools.defaults))).getOr {
+    error(it.getString { StringTextStream(s) })
 }
 
-infix fun <T, U> Parser<T, U>.collectErrors(message: String): Parser<T, U> = collectErrors { errors, pos ->
-    listOf(ParseResult.ParseFailure(ParseError(message, pos, errors)))
-}
+inline infix fun <T> PResult<T>.apply(fn: (T) -> Any?): PResult<T> = when (this) { is POK -> fn(value) else -> null } .let { this }
+inline infix fun <T, R> PResult<T>.map(fn: (T) -> R): R? = when (this) { is POK -> fn(value) else -> null }
+inline infix fun <T> PResult<T>.onError(fn: (ParseError) -> Any?): PResult<T> = when (this) { is PFail -> fn(error) else -> null } .let { this }
 
-fun <T, U> Parser<T, U>.filterErrors(noErrorsIfSuccessful: Boolean = false): Parser<T, U> = { ctx ->
-    val results = this(ctx)
-    val lastErrorPosition = getLastErrorPosition(results.filter { it is ParseResult.ParseFailure } .map { it as ParseResult.ParseFailure } .map { it.error.position })
-    val errors = results .filter { it is ParseResult.ParseFailure } .map { it as ParseResult.ParseFailure } .filter {
-        (it.error.position.line1 > lastErrorPosition.line1 || it.error.position.line1 == lastErrorPosition.line1 && it.error.position.char1 >= lastErrorPosition.char1)
-       }
-    if (noErrorsIfSuccessful) {
-        results.filter { it is ParseResult.ParseSuccess } .ifEmpty { errors }
-    }
-    else {
-        results.filter { it is ParseResult.ParseSuccess } + errors
-    }
-}
-
-private fun getLastErrorPosition(positions: List<Position>): Position = if (positions.isEmpty()) Position(0, 0) else positions.last()
+fun <T> PResult<T>.get(): T? = when (this) { is POK -> value else -> null }
+fun <T> PResult<T>.getOr(fn: (ParseError) -> T): T = when (this) { is POK -> value; is PFail -> fn(error) }

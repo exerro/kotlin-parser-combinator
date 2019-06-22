@@ -11,6 +11,7 @@ class Lexer(
         private val consumeToken: (TextStream, Position) -> Token?,
         private val consumeWhitespace: (TextStream, Position) -> Position = defaultConsumeWhitespace,
         private var position: Position = Position(1, 1),
+        /** The position of the previous token that was consumed */
         val lastTokenPosition: Position = Position(1, 0)
 ) {
     private lateinit var result: Pair<Token, Lexer>
@@ -33,6 +34,7 @@ class Lexer(
     }
 }
 
+/** Thrown by a lexer upon finding an input sequence not matched by any lexer rules */
 class TokenParseException(error: String): Throwable(error)
 
 object LexerTools {
@@ -110,6 +112,8 @@ object LexerTools {
             null
         }
     }
+
+    val defaults = floats() lexUnion identifiers() lexUnion strings(true) lexUnion any()
 }
 
 /** Builds a token consumer matching either the lvalue or rvalue, with the lvalue taking precedence */

@@ -45,11 +45,18 @@ infix fun Position.after(chars: Int): Position = Position(line2, char2 + chars)
 /** Returns true if this position is immediately after the other position */
 infix fun Position.follows(other: Position): Boolean = line1 == other.line2 && char1 == other.char2 + 1
 
+/** Returns the last position of a list of positions, compared by their first position */
+fun List<Position>.last(): Position
+        = drop(1).fold(this[0]) { a, b ->
+    if (a.line1 > b.line1) a else if (a.line1 == b.line1 && a.char1 > b.char1) a else b
+}
+
 private fun Position.getSourceLines(stream: TextStream): Pair<String, String> {
     return if (line1 == line2) {
         val line = getLine(stream, line1)
         Pair(line, line)
-    } else {
+    }
+    else {
         val l1 = getLine(stream, line1)
         val l2 = getLine(stream, line2 - line1)
         Pair(l1, l2)
@@ -75,8 +82,3 @@ private fun getLine(stream: TextStream, line: Int): String {
 
     return result.toString()
 }
-
-fun List<Position>.last(): Position
-        = drop(1).fold(this[0]) { a, b ->
-            if (a.line1 > b.line1) a else if (a.line1 == b.line1 && a.char1 > b.char1) a else b
-        }

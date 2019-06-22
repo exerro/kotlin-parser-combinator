@@ -29,7 +29,5 @@ abstract class Positioned<out T> {
         }
     }
 
-    override fun toString(): String {
-        return getValue().toString() + " @ " + getPosition().getPositionString()
-    }
+    override fun toString(): String = getValue().toString() + " @ " + getPosition().getPositionString()
 }
