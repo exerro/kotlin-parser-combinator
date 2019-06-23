@@ -20,8 +20,8 @@ val regexText: P<RegexExpr> = parser {
 
 val regexCharSet = parser {
     wrap(sequence {
-        val isNegated = p { optional(sym("^")) }
-        val ss = p { tokenType(TOKEN_STR) until sym("]") }.map {
+        val isNegated = p { optional(symbol("^")) }
+        val ss = p { tokenType(TOKEN_STR) until symbol("]") }.map {
             RegexExpr.RegexText(it.text)
         }
         RegexExpr.RegexAlternation(ss.toSet())
@@ -31,16 +31,16 @@ val regexCharSet = parser {
 val regexPrimary = parser { oneOf(
         regexCharSet,
         wrap(p { regexExpr }, "(", ")"),
-        sym("$") map { RegexExpr.RegexEOF },
-        sym(".") map { RegexExpr.RegexWildcard },
+        symbol("$") map { RegexExpr.RegexEOF },
+        symbol(".") map { RegexExpr.RegexWildcard },
         regexText
 ) }
 
 val regexUnaryOperator = parser { oneOf(
-        sym("+"),
-        sym("-"),
-        sym("*"),
-        sym("?")
+        symbol("+"),
+        symbol("-"),
+        symbol("*"),
+        symbol("?")
 ) }
 
 val regexUnary = parser { sequence {
@@ -68,11 +68,11 @@ val regexList = parser { sequence {
 } }
 
 val regexExpr: P<RegexExpr> = parser {
-    regexList sepBy sym("|") map { if (it.size == 1) it[0] else RegexExpr.RegexAlternation(it.toSet()) }
+    regexList sepBy symbol("|") map { if (it.size == 1) it[0] else RegexExpr.RegexAlternation(it.toSet()) }
 }
 
 val regexRootExpr = parser { sequence {
-    if (p { optional(sym("^")) } != null) {
+    if (p { optional(symbol("^")) } != null) {
         p { regexExpr followedBy eof }
     }
     else {

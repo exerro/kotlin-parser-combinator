@@ -15,7 +15,7 @@ sealed class PResult<out T>
 data class POK<T>(val value: T, val state: PState): PResult<T>()
 data class PFail<T>(val error: ParseError): PResult<T>()
 
-@Suppress("ClassName")
+@Suppress("ClassName", "MemberVisibilityCanBePrivate", "unused")
 object parser {
     fun <T> value(value: T): P<T> = { s -> POK(value, s) }
     fun <T> error(error: ParseError): P<T> = { _ -> PFail(error) }
@@ -36,14 +36,18 @@ object parser {
     fun keyword(word: String) = tokenValue(TOKEN_KEYWORD, word)
     fun keywords(keywords: List<String>): P<Set<Token>> = oneOf(keywords.map(::keyword)) bind { k -> keywords(keywords.filter { it != k.text }) map { setOf(k) + it } } mapErr { value(setOf()) }
     fun keywords(vararg keywords: String): P<Set<Token>> = keywords(keywords.toList())
-    fun sym(symbol: String) = symbol.drop(1).fold(tokenValue(TOKEN_SYM, "${symbol[0]}")) { a, b -> a nextTo tokenValue(TOKEN_SYM, "$b") }
+    fun symbol(symbol: String) = symbol.drop(1).fold(tokenValue(TOKEN_SYM, "${symbol[0]}")) { a, b -> a nextTo tokenValue(TOKEN_SYM, "$b") }
+    @Deprecated("Use symbol() instead") fun sym(symbol: String) = symbol.drop(1).fold(tokenValue(TOKEN_SYM, "${symbol[0]}")) { a, b -> a nextTo tokenValue(TOKEN_SYM, "$b") }
     fun <T> lookahead(p: P<T>): P<T> = state bind { s -> p bind { { _: PState -> POK(it, s) } } }
     fun <T> wrap(p: P<T>, a: AnyP, b: AnyP): P<T> = a then p followedBy b
-    fun <T> wrap(p: P<T>, a: String, b: String): P<T> = wrap(p, sym(a), sym(b))
+    fun <T> wrap(p: P<T>, a: String, b: String): P<T> = wrap(p, symbol(a), symbol(b))
     fun <T> oneOf(parsers: List<P<T>>): P<T> = { s -> parsers.map { it(s) } .let { results -> results.firstOrNull { it is POK }
             ?: PFail(ParseError("No viable alternatives", s.pos, results.map { (it as PFail).error } .toSet())) } }
+    fun <T> branch(vararg options: Pair<AnyP, P<T>>): P<T> = { s -> options.map { Pair(it.first(s), it.second) } .let { results -> results.firstOrNull { it.first is POK } ?.let { it.second(s) }
+            ?: PFail(ParseError("No viable alternatives", s.pos, results.map { (it.first as PFail).error } .toSet())) } } // TODO: avoid reparsing to get error
     fun <T> oneOf(vararg parsers: P<T>): P<T> = oneOf(parsers.toList())
     fun <T> optional(p: P<T>): P<T?> = p or (nothing map { null })
+    fun <T> optionalList(p: P<List<T>>): P<List<T>> = optional(p) map { it ?: listOf() }
     fun <T> many(parser: P<T>): P<List<T>> = parser bind { fst -> p { many(parser) map { listOf(fst) + it } } } mapErr { value(listOf()) }
     fun <T> sequence(fn: Sequence.() -> T): P<T> = { s -> val seq = Sequence(s); try { POK(fn(seq), seq.state) } catch (e: SErr) { PFail(e.err) } }
 
@@ -54,7 +58,7 @@ object parser {
     infix fun <T> AnyP.then(p: P<T>): P<T> = bind { p }
     infix fun <T> P<T>.followedBy(p: AnyP): P<T> = bind { v -> p map { v } }
     infix fun <T> P<T>.or(p: P<T>): P<T> = state bind { s -> mapErr { err -> p mapErr { err2 -> error(ParseError("No viable alternative", s.pos, setOf(err, err2))) } } }
-    infix fun <T> P<T>.until(p: AnyP): P<List<T>> = p map { listOf<T>() } mapErr { (this bind { f -> until(p) map { rest -> listOf(f) + rest } }) }
+    infix fun <T> P<T>.until(p: AnyP): P<List<T>> = lookahead(p) map { listOf<T>() } mapErr { (this bind { f -> until(p) map { rest -> listOf(f) + rest } }) }
     infix fun <T> P<T>.sepBy(p: AnyP): P<List<T>> = bind { first -> p then sepBy(p) map { rest -> listOf(first) + rest } or value(listOf(first)) }
     infix fun P<Token>.nextTo(p: P<Token>): P<Token> = bind { first -> p err { if (it.getPosition().follows(first.getPosition())) null
         else ParseError("Token '${it.text}' doesn't follow '${first.text}'", it.getPosition()) } }
@@ -91,6 +95,7 @@ object parser {
     private class SErr(val err: ParseError): Throwable()
 }
 
+@Suppress("unused")
 infix fun <T> P<T>.parse(s: StringTextStream) = this(PState(Lexer(s, LexerTools.defaults)))
 infix fun <T> P<T>.parse(s: String) = this(PState(Lexer(StringTextStream(s), LexerTools.defaults))).getOr {
     error(it.getString { StringTextStream(s) })
