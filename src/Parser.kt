@@ -7,8 +7,8 @@ typealias AnyP = P<Any?>
 private typealias PairList<A, B> = List<Pair<A, B>>
 
 open class PState(val lexer: Lexer) {
-    val pos get() = lexer.next().first.getPosition()
-    open fun consume() = PState(lexer.next().second)
+    val pos get() = lexer.nextToken.getPosition()
+    open fun consume() = PState(lexer.nextLexer)
 }
 
 sealed class PResult<out T>
@@ -19,8 +19,8 @@ data class PFail<T>(val error: ParseError): PResult<T>()
 object parser {
     val nothing: P<Unit> = value(Unit)
     val state: P<PState> = { s -> POK(s, s) }
-    val peek: P<Token> = { s -> POK(s.lexer.next().first, s) }
-    val token: P<Token> = { s -> POK(s.lexer.next().first, s.consume()) }
+    val peek: P<Token> = { s -> POK(s.lexer.nextToken, s) }
+    val token: P<Token> = { s -> POK(s.lexer.nextToken, s.consume()) }
     val identifier: P<Token> = tokenType(TOKEN_IDENT)
     val integer: P<Token> = tokenType(TOKEN_INT)
     val number: P<Token> = tokenType(TOKEN_FLOAT)

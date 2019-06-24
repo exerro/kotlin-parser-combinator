@@ -14,24 +14,25 @@ class Lexer(
         /** The position of the previous token that was consumed */
         val lastTokenPosition: Position = Position(1, 0)
 ) {
-    private lateinit var result: Pair<Token, Lexer>
+    /** The pair of the next token and the next lexer to use */
+    private val next: Pair<Token, Lexer> by lazy {
+        position = consumeWhitespace(stream, position)
+        val token = if (stream.isEOF()) Token(TOKEN_EOF, "EOF", position) else consumeToken(stream, position)
 
-    /** Generates a pair of the next token and the next lexer to use */
-    fun next(): Pair<Token, Lexer> {
-        if (!::result.isInitialized) {
-            position = consumeWhitespace(stream, position)
-            val token = if (stream.isEOF()) Token(TOKEN_EOF, "EOF", position) else consumeToken(stream, position)
-
-            if (token != null) {
-                result = Pair(token, Lexer(stream, consumeToken, consumeWhitespace, token.getPosition() after 1, token.getPosition()))
-            }
-            else {
-                throw TokenParseException("No token match for character '${stream.peekNextChar()}'")
-            }
+        if (token != null) {
+            Pair(token, Lexer(stream, consumeToken, consumeWhitespace, token.getPosition() after 1, token.getPosition()))
         }
-
-        return result
+        else {
+            throw TokenParseException("No token match for character '${stream.peekNextChar()}'")
+        }
     }
+
+    /** The next token in the input stream */
+    val nextToken get() = next.first
+
+    /** A lexer whose input stream starts after the next token.
+     * Evaluated lazily => successive calls to nextLexer will always be the same object */
+    val nextLexer get() = next.second
 }
 
 /** Thrown by a lexer upon finding an input sequence not matched by any lexer rules */

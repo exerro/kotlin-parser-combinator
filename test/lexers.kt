@@ -126,21 +126,21 @@ class LexerTester(
         private var lexer: Lexer,
         private val parent: LexerTester?
 ): ValueTester<Lexer>(lexer, name) {
-    private var lastToken: Token = try { lexer.next().first } catch(e: TokenParseException) {
+    private var lastToken: Token = try { lexer.nextToken } catch(e: TokenParseException) {
         (parent ?: this).error(e.message.toString())
         Token(TOKEN_EOF, "<ERROR>", Position(0, 0))
     }
 
     fun nextToken() {
         try {
-            lexer = lexer.next().second
-            lastToken = lexer.next().first
+            lexer = lexer.nextLexer
+            lastToken = lexer.nextToken
         }
         catch (e: TokenParseException) {
 
         }
     }
-    fun subNextToken(test: LexerTester.() -> Unit): LexerTester { (parent ?: this).child(LexerTester("$name (sub)", lexer.next().second, null), test); return this }
+    fun subNextToken(test: LexerTester.() -> Unit): LexerTester { (parent ?: this).child(LexerTester("$name (sub)", lexer.nextLexer, null), test); return this }
     fun assertTokenEquals(value: String): LexerTester { (parent ?: this).assertValueEquals(lastToken.text, value); return this }
     fun assertTokenHasType(type: TokenType): LexerTester { (parent ?: this).assertValueEquals(lastToken.type, type); return this }
     fun assertTokenHasPosition(position: Position): LexerTester { (parent ?: this).assertValueEquals(lastToken.getPosition(), position); return this }
