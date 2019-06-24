@@ -1,3 +1,5 @@
+import java.lang.IllegalStateException
+import error as error1
 
 fun parsingRegexTests() {
     test("Parsing regex") {
@@ -53,7 +55,7 @@ val regexUnary = parser { sequence {
             "-" -> RegexExpr.RegexRepetition(expr, false)
             "*" -> RegexExpr.RegexRepetition(expr)
             "?" -> RegexExpr.RegexAlternation(setOf(expr, RegexExpr.RegexText("")))
-            else -> error("what")
+            else -> throw IllegalStateException("what")
         }
     }
 } }

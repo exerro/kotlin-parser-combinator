@@ -11,6 +11,9 @@ abstract class TextStream {
 
     /** Returns true if there are no more characters to read, false otherwise */
     abstract fun isEOF(): Boolean
+
+    /** Resets the stream (essentially moving it back to position 0) */
+    abstract fun reset()
 }
 
 /** A text stream created from some text */
@@ -37,11 +40,15 @@ class StringTextStream(private val content: String): TextStream() {
 
     override fun isEOF(): Boolean
             = position >= content.length
+
+    override fun reset() {
+        position = 0
+    }
 }
 
 /** A text stream created from the contents of a file */
-class FileTextStream(file: String): TextStream() {
-    private val inputStream = BufferedInputStream(File(file).inputStream())
+class FileTextStream(private val file: String): TextStream() {
+    private var inputStream = BufferedInputStream(File(file).inputStream())
 
     override fun peekNextChar(): Char {
         if (inputStream.available() != 0) {
@@ -61,4 +68,7 @@ class FileTextStream(file: String): TextStream() {
     override fun isEOF(): Boolean
             = inputStream.available() == 0
 
+    override fun reset() {
+        inputStream = BufferedInputStream(File(file).inputStream())
+    }
 }

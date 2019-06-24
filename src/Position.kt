@@ -13,8 +13,9 @@ data class Position(val line1: Int, val char1: Int, val line2: Int = line1, val 
 
     /** Returns a string containing an error message and an indicator of where in its source the error targets
      *
-     *  WARNING: `source` must be a newly created stream */
+     *  Note: the text stream will be reset during this method */
     fun getErrorString(error: String, source: TextStream): String {
+        source.reset()
         return if (line1 == line2) {
             "$error\n" +
                     "    ${this.getSourceLines(source).first}\n" +
