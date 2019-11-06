@@ -56,7 +56,7 @@ object LexerTools {
 
     /** Builds a token consumer matching identifiers */
     fun identifiers(): (TextStream, Position) -> Token?
-            = matching({ it in 'a' .. 'z' || it in 'A' .. 'Z' }, { it in 'a' .. 'z' || it in 'A' .. 'Z' || it in '0' .. '9' }) { str, pos ->
+            = matching({ it in 'a' .. 'z' || it in 'A' .. 'Z' || it == '_' }, { it in 'a' .. 'z' || it in 'A' .. 'Z' || it in '0' .. '9' || it == '_' }) { str, pos ->
                     Token(TOKEN_IDENT, str, pos)
             }
 

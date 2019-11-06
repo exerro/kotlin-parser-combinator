@@ -4,7 +4,6 @@ typealias Collapser<T, O> = (String, O, List<T>) -> T
 fun <T, O> expressionParser(term: P<T>, fn: ExpressionParserBuilder<T, O>.() -> Any?): P<T> {
     val b = ExpressionParserBuilder<T, O>(term)
     fn(b)
-    b.debug()
     return b.parser()
 }
 
@@ -52,10 +51,6 @@ class ExpressionParserBuilder<T, O> internal constructor(val term: P<T>) {
 
     fun unaryr(name: String, operator: String, precedence: Int = 0, keyword: Boolean = false): Unit
             = unaryr(name, precedence) { converter(operator, keyword) }
-
-    internal fun debug() {
-        println(operators.filter { it.isUnaryL })
-    }
 
     internal fun parser(): P<T> = parser { opt sepByOp bop map { (first, operations) ->
         val (firstLOps, firstT, firstROps) = first

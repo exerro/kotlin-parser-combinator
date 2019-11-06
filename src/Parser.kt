@@ -39,6 +39,8 @@ object parser {
             = { _ -> PFail(ParseError(error, pos)) }
     fun <T> p(p: () -> P<T>): P<T>
             = { s -> p()(s) }
+    fun <T> pos(p: P<T>): P<Positioned<T>>
+            = state bind { s -> (p andThen state) map { (value, ss) -> positioned(value, s.pos to ss.lexer.lastTokenPosition) } }
     fun tokenType(type: TokenType): P<Token>
             = peek bind { t -> token filter { t.type == type } or error("Expecting any $type, got ${t.type} ('${t.text}')", t.getPosition()) }
     fun tokenValue(type: TokenType, value: String): P<Token>
@@ -142,7 +144,7 @@ object parser {
     private class SErr(val err: ParseError): Throwable()
 
     // TODO: remove deprecated functions
-    @Deprecated("Generates bad error messages. Use abc instead", ReplaceWith("symbol(\"endSymbol\") ifNotThen p defaultsTo listOf()"))
+    @Deprecated("Generates bad error messages.", ReplaceWith("symbol(\"endSymbol\") ifNotThen p defaultsTo listOf()"))
     fun <T> optionalList(p: P<List<T>>): P<List<T>> = optional(p) defaultsTo listOf()
 
     @Deprecated("Use symbol() instead", ReplaceWith("symbol(symbol)"))
@@ -156,11 +158,23 @@ infix fun <T> P<T>.parse(s: String) = this(PState(Lexer(StringTextStream(s), Lex
 }
 
 @Suppress("unused")
-inline infix fun <T> PResult<T>.apply(fn: (T) -> Any?): PResult<T> = when (this) { is POK -> fn(value) else -> null } .let { this }
-@Suppress("unused")
-inline infix fun <T, R> PResult<T>.map(fn: (T) -> R): R? = when (this) { is POK -> fn(value) else -> null }
-@Suppress("unused")
-inline infix fun <T> PResult<T>.onError(fn: (ParseError) -> Any?): PResult<T> = when (this) { is PFail -> fn(error) else -> null } .let { this }
+inline infix fun <T> PResult<T>.apply(fn: (T) -> Any?): PResult<T>
+        = when (this) { is POK -> fn(value) else -> null } .let { this }
 
-fun <T> PResult<T>.get(): T? = when (this) { is POK -> value else -> null }
-fun <T> PResult<T>.getOr(fn: (ParseError) -> T): T = when (this) { is POK -> value; is PFail -> fn(error) }
+@Suppress("unused")
+inline infix fun <T, R> PResult<T>.map(fn: (T) -> R): R?
+        = when (this) { is POK -> fn(value) else -> null }
+
+@Suppress("unused")
+inline infix fun <T> PResult<T>.onError(fn: (ParseError) -> Any?): PResult<T>
+        = when (this) { is PFail -> fn(error) else -> null } .let { this }
+
+@SuppressWarnings("unused")
+infix fun <T> PResult<T>.getOrError(stream: TextStream): T
+        = when (this) { is POK -> value; is PFail -> error(error.getString(stream)) }
+
+infix fun <T> PResult<T>.getOr(fn: (ParseError) -> T): T
+        = when (this) { is POK -> value; is PFail -> fn(error) }
+
+fun <T> PResult<T>.get(): T?
+        = when (this) { is POK -> value else -> null }
