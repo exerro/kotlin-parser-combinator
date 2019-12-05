@@ -6,6 +6,7 @@ import java.lang.StringBuilder
  *
  * It may return null to indicate there is no valid token, and may be made from functions in LexerTools.
  */
+@Deprecated("Use ASTify instead")
 class Lexer(
         private val stream: TextStream,
         private val consumeToken: (TextStream, Position) -> Token?,
@@ -36,8 +37,10 @@ class Lexer(
 }
 
 /** Thrown by a lexer upon finding an input sequence not matched by any lexer rules */
+@Deprecated("Use ASTify instead")
 class TokenParseException(error: String): Throwable(error)
 
+@Deprecated("Use ASTify instead")
 object LexerTools {
     /** Builds a token consumer matching integers */
     fun integers(): (TextStream, Position) -> Token? = matching({ it in '0' .. '9' }) { str, pos ->

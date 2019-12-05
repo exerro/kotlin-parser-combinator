@@ -1,5 +1,6 @@
 
 /** Holds an error message and position, and a list of causes if applicable */
+@Deprecated("Use ASTify instead")
 data class ParseError(val error: String, val position: Position, val causes: Set<ParseError> = setOf()) : Throwable() {
     /** Return a string representation of the error, showing source lines and positions */
     fun getString(source: TextStream): String {

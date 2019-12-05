@@ -1,5 +1,6 @@
 
 /** Represents an object with a position */
+@Deprecated("Use ASTify instead")
 abstract class Positioned<out T> {
     /** Get the value of the object */
     abstract fun getValue(): T

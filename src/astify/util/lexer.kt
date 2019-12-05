@@ -29,7 +29,7 @@ fun tokenParser(
             char mapv (::CharacterToken),
             string mapv (::StringToken),
             identifier mapv { if (keywords.contains(it)) KeywordToken(it) else IdentifierToken(it) },
-            any mapv (::SymbolToken)
+            any mapv { SymbolToken(it.toString()) }
     ) preceededBy whitespace
 
     token map { x, p -> x positioned p positioned p }

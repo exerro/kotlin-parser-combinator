@@ -1,5 +1,6 @@
 
 /** A token from some text stream */
+@Deprecated("Use ASTify instead")
 data class Token(val type: String, val text: String, private val pos: Position): Positioned<String>() {
     override fun getValue(): String = text
     override fun getPosition(): Position = pos
@@ -9,6 +10,7 @@ data class Token(val type: String, val text: String, private val pos: Position):
     }
 }
 
+@Deprecated("Use ASTify instead")
 typealias TokenType = String
 
 // integer constants for common token types

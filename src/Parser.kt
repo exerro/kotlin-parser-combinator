@@ -1,20 +1,28 @@
 
 // TODO: comments!
 
+@Deprecated("Use ASTify instead")
 typealias P<T> = (PState) -> PResult<T>
+@Deprecated("Use ASTify instead")
 typealias AnyP = P<Any?>
 
+@Deprecated("Use ASTify instead")
 private typealias PairList<A, B> = List<Pair<A, B>>
 
+@Deprecated("Use ASTify instead")
 open class PState(val lexer: Lexer) {
     val pos get() = lexer.nextToken.getPosition()
     open fun consume() = PState(lexer.nextLexer)
 }
 
+@Deprecated("Use ASTify instead")
 sealed class PResult<out T>
+@Deprecated("Use ASTify instead")
 data class POK<T>(val value: T, val state: PState): PResult<T>()
+@Deprecated("Use ASTify instead")
 data class PFail<T>(val error: ParseError): PResult<T>()
 
+@Deprecated("Use ASTify instead")
 @Suppress("ClassName", "MemberVisibilityCanBePrivate", "unused")
 object parser {
     val nothing: P<Unit> = value(Unit)
@@ -132,6 +140,7 @@ object parser {
         is PFail -> fn(result.error)(s)
     } }
 
+    @Deprecated("Use ASTify instead")
     operator fun <T> invoke(fn: parser.() -> P<T>): P<T> = fn(parser)
 
     class Sequence internal constructor(var state: PState) {

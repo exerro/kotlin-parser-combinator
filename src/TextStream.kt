@@ -2,6 +2,7 @@ import java.io.BufferedInputStream
 import java.io.File
 
 /** A stream of text to be fed into a lexer */
+@Deprecated("Use ASTify instead")
 abstract class TextStream {
     /** Read the next character without consuming it */
     abstract fun peekNextChar(): Char
@@ -17,6 +18,7 @@ abstract class TextStream {
 }
 
 /** A text stream created from some text */
+@Deprecated("Use ASTify instead")
 class StringTextStream(private val content: String): TextStream() {
     private var position = 0
 
@@ -47,6 +49,7 @@ class StringTextStream(private val content: String): TextStream() {
 }
 
 /** A text stream created from the contents of a file */
+@Deprecated("Use ASTify instead")
 class FileTextStream(private val file: String): TextStream() {
     private var inputStream = BufferedInputStream(File(file).inputStream())
 

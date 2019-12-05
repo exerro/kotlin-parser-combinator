@@ -1,6 +1,7 @@
 import java.lang.StringBuilder
 
 /** Represents a position in some source of text */
+@Deprecated("Use ASTify instead")
 data class Position(val line1: Int, val char1: Int, val line2: Int = line1, val char2: Int = char1) {
     /** Returns a string representation of this position */
     fun getPositionString(): String {

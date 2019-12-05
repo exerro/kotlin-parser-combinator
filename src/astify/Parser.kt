@@ -19,6 +19,9 @@ class ParserContext<Token> {
     fun <T> inject(value: T): P<Token, T>
             = { s -> ParseSuccess(value, s.position, s) }
 
+    fun <T> inject(value: T, position: Position): P<Token, T>
+            = { s -> ParseSuccess(value, position, s) }
+
     fun <T> lookahead(p: P<Token, T>): P<Token, T>
             = { s -> (p fmap { ParseSuccess(it.value, it.position, s) })(s) }
 
@@ -27,6 +30,13 @@ class ParserContext<Token> {
     ): P<Token, R> = { s -> when (val r = this(s)) {
         is ParseSuccess -> fn(r)
         is ParseFail -> r
+    } }
+
+    infix fun <T> P<Token, T>.fmaperr(
+            fn: (ParseFail) -> ParseFail
+    ): P<Token, T> = { s -> when (val r = this(s)) {
+        is ParseSuccess -> r
+        is ParseFail -> fn(r)
     } }
 
     infix fun <A, B> P<Token, A>.bind(fn: (A, Position) -> P<Token, B>): P<Token, B>
@@ -43,12 +53,6 @@ class ParserContext<Token> {
 
     fun <T> P<Token, T>.satisfying(error: String, fn: (T) -> Boolean): P<Token, T>
             = fmap { r -> if (fn(r.value)) r else ParseFail(error, r.position) }
-
-    infix fun <T> P<Token, T>.satisfying(fn: (T) -> Boolean): P<Token, T>
-            = satisfying("Failed predicate", fn)
-
-    infix fun <T> P<Token, T>.equalTo(value: T): P<Token, T>
-            = satisfying("Expected <$value>") { it == value }
 
     ////////////////////////////////////////////////////////////////////////////
 
@@ -77,6 +81,22 @@ class ParserContext<Token> {
 
     infix fun <R, T: R> P<Token, T?>.orElse(p: P<Token, R>)
             = this bindv { if (it == null) p else inject(it) }
+
+    infix fun <T> P<Token, T>.satisfying(fn: (T) -> Boolean): P<Token, T>
+            = satisfying("Failed predicate", fn)
+
+    infix fun <T> P<Token, T>.equalTo(value: T): P<Token, T>
+            = satisfying("Expected <$value>") { it == value }
+
+    inline infix fun <reified T, reified R: T> P<Token, T>.asType(crossinline error: (T) -> String)
+            = fmap { if (it.value is R) ParseSuccess(it.value, it.position, it.nextState)
+                   else ParseFail(error(it.value), it.position) }
+
+    inline fun <reified R: Any> P<Token, *>.asType()
+            = fmap { when (it.value) {
+                is R -> ParseSuccess(it.value, it.position, it.nextState)
+                else -> ParseFail("Expected ${R::class.tokenTypeName()}", it.position)
+            } }
 
     fun <T> oneOf(vararg parsers: P<Token, T>): P<Token, T> = { s ->
         val results = LazyMappedList(parsers.toList()) { p -> p(s) }
