@@ -7,7 +7,7 @@ fun parsingExpressionTests() {
 
 val termParser = parser { integer map { it.text.toInt() } }
 val mathParser = expressionParser<Int, Token>(termParser) {
-    parsers()
+    defaultConverter()
     unaryl("unm", "-", 6)
     unaryl("lop", "<", 2)
     unaryr("rop", ">", 2)

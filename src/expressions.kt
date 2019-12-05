@@ -1,58 +1,66 @@
 
-typealias Collapser<T, O> = (String, O, List<T>) -> T
+/** A joiner is a function "joining" a list of expressions and an operator into
+ *  a single expression.
+ *  Parameters are (operator name, operator object, operands) */
+typealias Joiner<Expr, Op> = (String, Op, List<Expr>) -> Expr
 
-fun <T, O> expressionParser(term: P<T>, fn: ExpressionParserBuilder<T, O>.() -> Any?): P<T> {
-    val b = ExpressionParserBuilder<T, O>(term)
+fun <Expr, Op> expressionParser(
+        term: P<Expr>,
+        fn: ExpressionParserBuilder<Expr, Op>.() -> Any?
+): P<Expr> {
+    val b = ExpressionParserBuilder<Expr, Op>(term)
     fn(b)
     return b.parser()
 }
 
-class ExpressionParserBuilder<T, O> internal constructor(val term: P<T>) {
-    private val operators = mutableSetOf<Operator<O>>()
-    private lateinit var collapser: Collapser<T, O>
-    private lateinit var converter: parser.(String, Boolean) -> P<O>
-    private val bop by lazy { parser { oneOf(operators.filter { it.isInfix } .map { it.parser map { result -> Pair(result, it) } }) } }
-    private val lop by lazy { parser { oneOf(operators.filter { it.isUnaryL } .map { it.parser map { result -> Pair(result, it) } }) } }
-    private val rop by lazy { parser { oneOf(operators.filter { it.isUnaryR } .map { it.parser map { result -> Pair(result, it) } }) } }
-    private val opt by lazy { parser { many(lop) bind { lops -> term bind { t -> many(rop) map { Triple(lops, t, it) } } } } }
-
-    fun collapse(fn: Collapser<T, O>) {
+class ExpressionParserBuilder<Expr, Op> internal constructor(
+        private val term: P<Expr>
+) {
+    fun collapse(fn: Joiner<Expr, Op>) {
         collapser = fn
     }
 
-    fun converter(fn: parser.(String, Boolean) -> P<O>) {
+    fun converter(fn: parser.(String, Boolean) -> P<Op>) {
         converter = fn
     }
 
-    fun infixl(name: String, precedence: Int = 0, getParser: parser.() -> P<O>) {
+    /** Declare a left associative infix binary operator. */
+    fun infixl(name: String, precedence: Int = 0, getParser: parser.() -> P<Op>) {
         operators.add(Operator(name, getParser(parser), precedence, true, 2))
     }
 
-    fun infixr(name: String, precedence: Int = 0, getParser: parser.() -> P<O>) {
+    /** Declare a right associative infix binary operator. */
+    fun infixr(name: String, precedence: Int = 0, getParser: parser.() -> P<Op>) {
         operators.add(Operator(name, getParser(parser), precedence, false, 2))
     }
 
-    fun unaryl(name: String, precedence: Int = 0, getParser: parser.() -> P<O>) {
+    /** Declare a left-handed unary operator. */
+    fun unaryl(name: String, precedence: Int = 0, getParser: parser.() -> P<Op>) {
         operators.add(Operator(name, getParser(parser), precedence, false, 1))
     }
 
-    fun unaryr(name: String, precedence: Int = 0, getParser: parser.() -> P<O>) {
+    /** Declare a right-handed unary operator. */
+    fun unaryr(name: String, precedence: Int = 0, getParser: parser.() -> P<Op>) {
         operators.add(Operator(name, getParser(parser), precedence, true, 1))
     }
 
+    /** Declare a left associative infix binary operator. */
     fun infixl(name: String, operator: String, precedence: Int = 0, keyword: Boolean = false): Unit
             = infixl(name, precedence) { converter(operator, keyword) }
 
+    /** Declare a right associative infix binary operator. */
     fun infixr(name: String, operator: String, precedence: Int = 0, keyword: Boolean = false): Unit
             = infixr(name, precedence) { converter(operator, keyword) }
 
+    /** Declare a left-handed unary operator. */
     fun unaryl(name: String, operator: String, precedence: Int = 0, keyword: Boolean = false): Unit
             = unaryl(name, precedence) { converter(operator, keyword) }
 
+    /** Declare a right-handed unary operator. */
     fun unaryr(name: String, operator: String, precedence: Int = 0, keyword: Boolean = false): Unit
             = unaryr(name, precedence) { converter(operator, keyword) }
 
-    internal fun parser(): P<T> = parser { opt sepByOp bop map { (first, operations) ->
+    internal fun parser(): P<Expr> = parser { opt sepByOp bop map { (first, operations) ->
         val (firstLOps, firstT, firstROps) = first
         val stack = OperandStack(firstT, collapser)
         firstLOps.forEach { (f, s) -> stack.pushOperator(f, s) }
@@ -66,13 +74,26 @@ class ExpressionParserBuilder<T, O> internal constructor(val term: P<T>) {
         }
         stack.get()
     } }
+
+    private val operators = mutableSetOf<Operator<Op>>()
+    private lateinit var collapser: Joiner<Expr, Op>
+    private lateinit var converter: parser.(String, Boolean) -> P<Op>
+    private val bop by lazy { parser { oneOf(operators.filter { it.isInfix } .map { it.parser map { result -> Pair(result, it) } }) } }
+    private val lop by lazy { parser { oneOf(operators.filter { it.isUnaryL } .map { it.parser map { result -> Pair(result, it) } }) } }
+    private val rop by lazy { parser { oneOf(operators.filter { it.isUnaryR } .map { it.parser map { result -> Pair(result, it) } }) } }
+    private val opt by lazy { parser { many(lop) bind { lops -> term bind { t -> many(rop) map { Triple(lops, t, it) } } } } }
 }
 
-fun <T> ExpressionParserBuilder<T, Token>.parsers() = converter { operator, keyword ->
+/** Sets a default converter for the parser builder using `keyword`/`symbol`
+ *  depending on the operator. */
+fun <T> ExpressionParserBuilder<T, Token>.defaultConverter() = converter { operator, keyword ->
     if (keyword) keyword(operator) else symbol(operator)
 }
 
-private class OperandStack<T, O>(operand: T, val collapser: Collapser<T, O>) {
+private class OperandStack<T, O>(
+        operand: T,
+        val collapser: Joiner<T, O>
+) {
     var operands = mutableListOf(operand)
     val operators = mutableListOf<Pair<O, Operator<O>>>()
 

@@ -10,6 +10,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="KotlinJavaRuntime" level="project" />
-    <orderEntry type="library" name="test-kt" level="project" />
+    <orderEntry type="library" name="lib/test-kt" level="application" />
   </component>
 </module>
