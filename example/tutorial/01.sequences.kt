@@ -1,28 +1,40 @@
 package tutorial
 
-import parser
-import parse
-import Token
+import astify.*
+import astify.util.TP
+import astify.util.lexerParser
+import astify.util.tokenP
 
-val expressionParser = parser { integer }
-val blockParser = parser { symbol("{") andThen symbol("}") } // not going with anything fancy here
+typealias Block = Pair<SymbolToken, SymbolToken>
+
+val expressionParser: TP<IntegerToken>
+        = tokenP { integer }
+
+val blockParser: TP<Block>
+        = tokenP { symbol("{") and symbol("}") } // not going with anything fancy here
 
 data class IfStatement(
         val condition: Token,
-        val block: Pair<Token, Token>,
-        val elseBlock: Pair<Token, Token>?
+        val block: Block,
+        val elseBlock: Block?
 )
 
-val ifStatementParser = parser.sequence {
-    p { identifier("if") } // identifier will be replaced with keyword in following tutorials
-    p { symbol("(") }
-    val condition = p { expressionParser }
-    p { symbol(")") }
-    val block = p { blockParser }
-    val elseBlock = if (p { optional(identifier("else")) } != null) p { blockParser } else null
-    IfStatement(condition, block, elseBlock)
+val ifStatementParser: TP<IfStatement> = P.seq {
+    val conditionParser = tokenP { wrap(expressionParser, symbol("("), symbol(")")) }
+    val (condition) = tokenP { keyword("if") keepRight conditionParser }
+    val (block) = blockParser
+
+    if (parse(tokenP { keyword("else") })) {
+        val (elseBlock) = blockParser
+        IfStatement(condition, block, elseBlock)
+    }
+    else
+        IfStatement(condition, block, null)
 }
 
 fun sequencesParserTest() {
-    println(ifStatementParser parse "if (5) {} else {}")
+    val keywords = setOf("if", "else")
+    val lexer = lexerParser(keywords)
+
+    println(parse("if (5) {} else {}", lexer, ifStatementParser))
 }

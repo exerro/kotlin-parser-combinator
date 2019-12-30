@@ -1,13 +1,19 @@
 package tutorial
 
-import parser
-import parse
+import astify.KeywordToken
+import astify.parse
+import astify.util.TP
+import astify.util.lexerParser
+import astify.util.tokenP
 
-val tokenParser = parser {
-    identifier("hello") andThen identifier("world")
+val tokenParser: TP<Pair<KeywordToken, KeywordToken>> = tokenP {
+    keyword("hello") and keyword("world")
 }
 
 fun helloWorldParserTest() {
-    println(tokenParser parse "hello world")
-    println(tokenParser parse "hello") // this will throw an error
+    val keywords = setOf("hello", "world")
+    val lexer = lexerParser(keywords)
+
+    println(parse("hello world", lexer, tokenParser))
+    println(parse("hello", lexer, tokenParser)) // this will throw an error
 }

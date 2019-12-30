@@ -2,10 +2,8 @@ package astify.util
 
 import astify.P
 import astify.Parser
-import astify.Token
 
-
-fun <T> charP(fn: CharParser.() -> P<Char, T>) = fn(CharParser())
+fun <T> charP(fn: CharParser.() -> CP<T>) = fn(CharParser())
 
 typealias CP<T> = P<Char, T>
 

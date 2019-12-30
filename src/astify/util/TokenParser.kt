@@ -2,7 +2,7 @@ package astify.util
 
 import astify.*
 
-fun <T> tokenP(fn: TokenParser.() -> P<Token, T>) = fn(TokenParser())
+fun <T> tokenP(fn: TokenParser.() -> TP<T>) = fn(TokenParser())
 
 typealias TP<T> = P<Token, T>
 
@@ -39,8 +39,12 @@ open class TokenParser: Parser<Token>() {
                 else
                     ParseFail("", b.position)
             } }
-        } map { it.value } fmape { e, _ -> e.copy(error = "Expected symbol '$symbol'") }
+        } map { it.value } fmape { e, _ -> e.copy(error = "Expected symbol '$s'") }
     }
 
     fun <T> parens(p: TP<T>): TP<T> = wrap(p, symbol("("), symbol(")"))
+
+    companion object {
+        fun <T> seq(fn: ParserSequence<Token>.() -> T) = P.seq(fn)
+    }
 }

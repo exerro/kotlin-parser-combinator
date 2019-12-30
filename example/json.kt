@@ -1,3 +1,11 @@
+import astify.P
+import astify.TextStream
+import astify.Token
+import astify.parse
+import astify.util.TP
+import astify.util.TokenParser
+import astify.util.lexerParser
+import astify.util.tokenP
 
 sealed class JSONValue
 data class JSONString(val value: String): JSONValue()
@@ -7,40 +15,41 @@ data class JSONArray(val values: List<JSONValue>): JSONValue()
 data class JSONBoolean(val value: Boolean): JSONValue()
 object JSONNull: JSONValue()
 
-val jsonValueParser: P<JSONValue> = parser { p { branch(
-        string to (token map { JSONString(it.text) }),
-        oneOf(number, integer) to (token map { JSONNumber(it.text.toFloat()) }),
-        keyword("true") to (token map { JSONBoolean(true) }),
-        keyword("false") to (token map { JSONBoolean(false) }),
-        keyword("null") to (token map { JSONNull }),
-        symbol("{") to jsonObjectParser,
-        symbol("[") to jsonArrayParser
-) } }
+//////////////////////////////////////////////////////////////////////////////////////////
 
-val jsonObjectMember = parser {
-    text(string) followedBy symbol(":") andThen jsonValueParser
+internal val jsonValueParser: TP<JSONValue> = tokenP { branch(
+        string to (string map { JSONString(it.value) }),
+        numeric to numeric,
+        symbol("-") to (symbol("-") keepRight numeric map { JSONNumber(-it.value) }),
+        keyword("true") to (keyword("true") map { JSONBoolean(true) }),
+        keyword("false") to (keyword("false") map { JSONBoolean(false) }),
+        keyword("null") to (keyword("null") map { JSONNull }),
+        symbol("{") to lazy { jsonObjectParser },
+        symbol("[") to lazy { jsonArrayParser }
+) }
+
+internal val TokenParser.numeric get()
+= number map { JSONNumber(it.value) } or (integer map { JSONNumber(it.value.toFloat()) })
+
+internal val jsonObjectMemberParser: TP<Pair<String, JSONValue>> = tokenP {
+    string map { it.value } keepLeft symbol(":") and jsonValueParser
 }
 
-val jsonObjectParser = parser {
-    wrap(symbol("}") ifNotThen (jsonObjectMember sepBy symbol(",")) defaultsTo listOf(), "{", "}") map {
-        JSONObject(it.toMap())
-    }
+internal val jsonObjectParser: TP<JSONValue> = tokenP {
+    wrappedCommaSeparated("{", "}", jsonObjectMemberParser) map { JSONObject(it.toMap()) }
 }
 
-val jsonArrayParser = parser {
-    wrap(symbol("]") ifNotThen (jsonValueParser sepBy symbol(",")) defaultsTo listOf(), "[", "]") map {
-        JSONArray(it)
-    }
-}
+internal val jsonArrayParser: TP<JSONValue> = tokenP {
+    wrappedCommaSeparated("[", "]", jsonValueParser) map { JSONArray(it) } }
 
-fun jsonLexer(s: TextStream)
-        = Lexer(s, LexerTools.keywords(listOf("true", "false", "null")) lexUnion LexerTools.defaults)
+//////////////////////////////////////////////////////////////////////////////////////////
 
-fun jsonParse(s: TextStream)
-        = jsonValueParser(PState(jsonLexer(s))) .getOr { error(it.getString(s)) }
+val jsonLexer = lexerParser(setOf("true", "false", "null"))
 
-fun jsonParse(s: String)
-        = jsonParse(StringTextStream(s))
+fun jsonParse(s: TextStream) = parse(s, jsonLexer, jsonValueParser)
+fun jsonParse(s: String) = parse(s, jsonLexer, jsonValueParser)
+
+//////////////////////////////////////////////////////////////////////////////////////////
 
 fun main() {
     println(jsonParse("\"hi\""))
@@ -51,4 +60,11 @@ fun main() {
     println(jsonParse("[1, 2, 3]"))
     println(jsonParse("{\"a\": 4, \"b\": false}"))
     println(jsonParse("{\"a\": 4, \"b\"}"))
+    // above ^ should error at the '}' saying it's expecting a ':'
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
+private fun <T> TokenParser.wrappedCommaSeparated(s: String, e: String, term: P<Token, T>)
+        = symbol(s) keepRight symbol(e) map { listOf<T>() } or
+        wrap(term sepBy symbol(","), symbol(s), symbol(e))
