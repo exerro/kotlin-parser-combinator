@@ -3,6 +3,7 @@ package astify_tests
 import Tester
 import assertValueEquals
 import astify.*
+import astify.util.ListParserState
 import astify.util.PositionedValue
 import astify.util.positioned
 import child

@@ -4,7 +4,6 @@ import astify.Position
 import astify.Token
 import astify.P
 import astify.Parser
-import astify.tokenP
 
 sealed class Expr(val position: Position)
 sealed class Op

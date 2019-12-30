@@ -1,5 +1,7 @@
 package astify
 
+import astify.util.TextStreamParserState
+
 fun <Token, T> parse(
         str: TextStream,
         state: ParserState<Token>,

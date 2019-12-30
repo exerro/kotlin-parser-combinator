@@ -1,6 +1,6 @@
-package astify
+package astify.util
 
-import astify.util.positioned
+import astify.*
 
 fun <T> tokenP(fn: TokenParser.() -> P<Token, T>) = fn(TokenParser())
 
