@@ -5,10 +5,10 @@ class TextStream private constructor(
         private val chars: CharArray,
         private val index: Int
 ) {
-    constructor(str: String): this(str, str.toCharArray(), 0)
+    val char: Char? = chars.getOrNull(index)
+    val next by lazy { TextStream(raw, chars, index + 1) }
 
-    val char: Char = chars[index]
-    val next by lazy {
-        if (index + 1 < chars.size) TextStream(raw, chars, index + 1) else null
+    companion object {
+        fun create(str: String) = TextStream(str, str.toCharArray(), 0)
     }
 }

@@ -45,7 +45,7 @@ fun positions() = test("ASTify Position") {
     }
 
     child("line/column numbers") {
-        val str = TextStream("abc\ndef\nghi\njkl")
+        val str = TextStream.create("abc\ndef\nghi\njkl")
         assertValueEquals(p1.columnNumber1(str), 1)
         assertValueEquals(p2.columnNumber1(str), 1)
         assertValueEquals(p3.columnNumber2(str), 3)
@@ -56,21 +56,21 @@ fun positions() = test("ASTify Position") {
     }
 
     child("line contents") {
-        val str = TextStream("abc\ndef\nghi\njkl")
+        val str = TextStream.create("abc\ndef\nghi\njkl")
         assertValueEquals(p3.line1(str), "abc")
         assertValueEquals(p3.line2(str), "def")
         assertValueEquals(p3.lines(str), "abc" to "def")
     }
 
     child("summary") {
-        val str = TextStream("abc\ndef\nghi\njkl")
+        val str = TextStream.create("abc\ndef\nghi\njkl")
         assertValueEquals(p1.summary(str), "[line 1 col 1]")
         assertValueEquals(p2.summary(str), "[line 2 col 1 .. 2]")
         assertValueEquals(p3.summary(str), "[line 1 col 4 .. line 2 col 3]")
     }
 
     child("line pointer") {
-        val str = TextStream("abc\ndef\nghi\njkl")
+        val str = TextStream.create("abc\ndef\nghi\njkl")
         val p1p = p1.linePointer(str)
         val p2p = p2.linePointer(str)
         val p3p = p3.linePointer(str)

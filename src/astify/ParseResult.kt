@@ -1,25 +1,27 @@
 package astify
 
-sealed class ParseResult<out Token, out T>
+sealed class ParseResult<out Token, out T> {
+    abstract fun <R> fmap(fn: (T) -> R): ParseResult<Token, R>
+}
 
-class ParseSuccess<out Token, out T>(
+data class ParseSuccess<out Token, out T>(
         val value: T,
-        val position: Position,
         val nextState: ParserState<Token>
-): ParseResult<Token, T>()
+): ParseResult<Token, T>() {
+    override fun <R> fmap(fn: (T) -> R)
+            = ParseSuccess(fn(value), nextState)
+}
 
-class ParseFail(
+data class ParseFail(
         val error: String,
         val position: Position,
         val causes: List<ParseFail> = listOf()
 ): ParseResult<Nothing, Nothing>() {
     fun formatError(str: TextStream): String {
-        return error + "\n" + position.linePointer(str) + "\n caused by" + causes
-                .map { it.formatError(str) }
-                .joinToString("\n") {
-                    it.replace("\n", "\n\t")
-                }
+        return error + "\n" + position.linePointer(str) + if (causes.isNotEmpty()) ("\n caused by\n" + causes.joinToString("\n") { "\t" + it.formatError(str).replace("\n", "\n\t") }) else ""
     }
+
+    override fun <R> fmap(fn: (Nothing) -> R) = this
 }
 
 class ParseError(
