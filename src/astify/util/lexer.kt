@@ -7,16 +7,16 @@ fun tokenParser(
         keywords: Set<String> = setOf()
 ): CP<PositionedValue<Token>> = charP {
     // TODO: make this branching
-    val token = whitespace keepRight oneOf(
+    val token = whitespace keepRight positioned(oneOf(
             float map { NumberToken(it) },
             integer map (::IntegerToken),
             char map (::CharacterToken),
             string map (::StringToken),
             identifier map { if (keywords.contains(it)) KeywordToken(it) else IdentifierToken(it) },
             anything map { SymbolToken(it.toString()) }
-    )
+    ))
 
-    positioned(token)
+    token
 }
 
 fun lexerParser(keywords: Set<String> = setOf()): P<Char, ParserState<Token>> = P.new { s ->

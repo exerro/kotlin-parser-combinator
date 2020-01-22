@@ -17,9 +17,20 @@ data class ParseFail(
         val position: Position,
         val causes: List<ParseFail> = listOf()
 ): ParseResult<Nothing, Nothing>() {
-    fun formatError(str: TextStream): String {
-        return error + "\n" + position.linePointer(str) + if (causes.isNotEmpty()) ("\n caused by\n" + causes.joinToString("\n") { "\t" + it.formatError(str).replace("\n", "\n\t") }) else ""
-    }
+    fun formatError(str: TextStream)
+            = formatErrorInternal(this, str, true)
 
     override fun <R> fmap(fn: (Nothing) -> R) = this
+}
+
+private fun formatErrorInternal(fail: ParseFail, str: TextStream, includePosition: Boolean): String {
+    val start = fail.error + if (includePosition) "\n" + fail.position.linePointer(str) else ""
+
+    return if (fail.causes.isEmpty()) start else {
+        val includeSubPosition = !fail.causes.all { it.position == fail.position }
+        start + ("\n caused by\n" + fail.causes.joinToString("\n") {
+            "\t" + formatErrorInternal(it, str, includeSubPosition)
+                    .replace("\n", "\n\t")
+        })
+    }
 }

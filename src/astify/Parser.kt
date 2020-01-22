@@ -90,11 +90,6 @@ open class Parser<Token> {
      *  P { value(x) } will always succeed and have a value of x. */
     fun <T> value(fn: () -> T): P<Token, T>
             = P.new { s -> ParseSuccess(fn(), s) }
-    /** Consume no input and yield `fn()` as a parse value.
-     *
-     *  P { value(x) } will always succeed and have a value of x. */
-    fun <T> value(value: T, position: Position): P<Token, T>
-            = P.new { s -> ParseSuccess(value, s) }
 
     fun satisfying(condition: (Token) -> Boolean): P<Token, Token> = positioned(anything) fmap {
         if (condition(it.value.value)) it.fmap { p -> p.value }
@@ -164,6 +159,9 @@ open class Parser<Token> {
      *  parser after `this`. */
     infix fun <T, R> P<Token, T>.bind(fn: (T) -> P<Token, R>): P<Token, R>
             = flatMap { fn(it.value) }
+
+    infix fun <T, R> P<Token, T>.bindf(fn: (P<Token, T>) -> P<Token, R>): P<Token, R>
+            = fn(this)
 
     // Operators ///////////////////////////////////////////////////////////////
 
