@@ -44,6 +44,7 @@ open class SequenceParsing<State: ParserState<State>, Error> internal constructo
         @Suppress("UNCHECKED_CAST")
         e.e as ParseResult.Failure<State, Error>
     }
+
     private class SequenceParsingError(
             val owner: SequenceParsing<*, *>,
             val e: ParseResult.Failure<*, *>
@@ -114,6 +115,15 @@ fun <State: ParserState<State>, Error, Value> peek(
 ////////////////////////////////////////////////////////////////////////////////
 /// Branching parsers                                                        ///
 ////////////////////////////////////////////////////////////////////////////////
+
+/** Parse either `l` or `r`. If `l` succeeds, its value will be yielded.
+ *  Otherwise, 'r' will be parsed, and `l`'s error will be ignored. */
+infix fun <State: ParserState<State>, Error, T> P<State, Error, T>.defaultsTo(
+        p: P<State, Error, T>
+): P<State, Error, T> = P { s -> when (val r = this.parse(s)) {
+    is ParseResult.Success -> r
+    is ParseResult.Failure -> p.parse(s)
+} }
 
 /** Parse either `l` or `r`. If `l` consumes input and then fails, that failure
  *  will be used. Otherwise, if `r` consumes input and then fails, that failure
@@ -359,4 +369,4 @@ inline fun <State: ParserState<State>, Value, reified T: Any> convertType(
 /** Ensure the value yielded by a parser equals some value. */
 infix fun <State: ParserState<State>, Value> P<State, String, Value>.equalTo(
         value: Value
-): P<State, String, Value> = satisfying { it == value }
+): P<State, String, Value> = satisfying { it == value } mapE { _ -> "expected '$value'" }
